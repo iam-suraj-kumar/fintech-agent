@@ -10,6 +10,7 @@ import streamlit as st
 
 from data.synthetic_transactions import SCENARIOS
 from graph import graph
+from ui.diagrams import ARCHITECTURE_DIAGRAM_SVG, FLOW_DIAGRAM_SVG, STYLE_BLOCK
 from ui.logic import get_decision_history, get_pending_reviews, resume_transaction, start_transaction
 
 st.set_page_config(page_title="Fraud Guard", layout="wide", page_icon="🛡️")
@@ -139,7 +140,28 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-how_it_works_tab, submit_tab, history_tab = st.tabs(["How It Works", "Submit & Review", "Decision History"])
+how_it_works_tab, architecture_tab, submit_tab, history_tab = st.tabs(
+    ["How It Works", "Architecture", "Submit & Review", "Decision History"]
+)
+
+st.markdown(STYLE_BLOCK, unsafe_allow_html=True)
+
+with architecture_tab:
+    st.subheader("Execution flow")
+    st.caption(
+        "Every transaction takes this path through the graph — deterministic triage decides whether "
+        "the three specialist agents get involved at all."
+    )
+    st.markdown(FLOW_DIAGRAM_SVG, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.subheader("Component architecture")
+    st.caption(
+        "What the graph depends on: a persistence layer that survives process restarts, and an "
+        "external dependencies layer that the specialist agents call out to."
+    )
+    st.markdown(ARCHITECTURE_DIAGRAM_SVG, unsafe_allow_html=True)
 
 with how_it_works_tab:
     st.subheader("Every transaction ends up in one of five places")
