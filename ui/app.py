@@ -1,3 +1,10 @@
+import os
+import sys
+
+# streamlit puts the script's own directory (ui/) on sys.path, not the
+# project root, so imports below would fail without this regardless of cwd.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
 
 from data.synthetic_transactions import SCENARIOS
