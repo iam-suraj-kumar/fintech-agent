@@ -1,5 +1,6 @@
 from langgraph.config import get_store
 
+import audit
 from state import TransactionState
 from tools.mock_apis import (
     get_account_history,
@@ -74,7 +75,7 @@ def triage_node(state: TransactionState) -> dict:
     return {
         "triage_score": score,
         "triage_decision": decision,
-        "audit_log": [f"triage: score={score:.2f} decision={decision}"],
+        "audit_log": [audit.info("triage", f"score={score:.2f} decision={decision}")],
     }
 
 
@@ -86,8 +87,8 @@ def route_after_triage(state: TransactionState) -> list[str]:
 
 
 def auto_approve_node(state: TransactionState) -> dict:
-    return {"audit_log": ["auto_approve: triage score below investigation threshold"]}
+    return {"audit_log": [audit.info("auto_approve", "triage score below investigation threshold")]}
 
 
 def auto_decline_node(state: TransactionState) -> dict:
-    return {"audit_log": ["auto_decline: triage score indicates high-confidence fraud"]}
+    return {"audit_log": [audit.info("auto_decline", "triage score indicates high-confidence fraud")]}

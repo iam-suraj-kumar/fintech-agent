@@ -3,6 +3,7 @@ from typing import Literal
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
+import audit
 from state import TransactionState
 
 AGGREGATOR_THRESHOLD = 0.5
@@ -31,7 +32,7 @@ def aggregator_node(state: TransactionState) -> dict:
     return {
         "composite_score": result.composite_score,
         "aggregate_reasoning": result.reasoning,
-        "audit_log": [f"aggregator: composite_score={result.composite_score:.2f} — {result.reasoning}"],
+        "audit_log": [audit.summary("aggregator", result.reasoning, score=result.composite_score)],
     }
 
 

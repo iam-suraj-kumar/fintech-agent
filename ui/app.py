@@ -1,3 +1,4 @@
+import itertools
 import os
 import sys
 
@@ -15,6 +16,19 @@ st.set_page_config(page_title="Fraud Guard", layout="wide", page_icon="🛡️")
 
 DECISION_ICON = {"approved": "✅", "declined": "⛔", "escalated": "🚨"}
 
+NODE_LABELS = {
+    "ingest": ("📥", "Ingest"),
+    "triage": ("🧮", "Triage"),
+    "auto_approve": ("✅", "Auto-approve"),
+    "auto_decline": ("⛔", "Auto-decline"),
+    "transaction_analyst": ("💰", "Transaction Analyst"),
+    "identity_verifier": ("🪪", "Identity Verifier"),
+    "pattern_detector": ("🔍", "Pattern Detector"),
+    "aggregator": ("🧭", "Aggregator"),
+    "human_review": ("🙋", "Human Review"),
+    "resolution": ("🏁", "Resolution"),
+}
+
 
 def risk_badge(score: float) -> str:
     if score >= 0.65:
@@ -22,6 +36,29 @@ def risk_badge(score: float) -> str:
     if score >= 0.30:
         return f":orange[**MEDIUM RISK** — {score:.2f}]"
     return f":green[**LOW RISK** — {score:.2f}]"
+
+
+def render_trace(audit_log: list[dict]) -> None:
+    for node, group in itertools.groupby(audit_log, key=lambda entry: entry["node"]):
+        entries = list(group)
+        icon, label = NODE_LABELS.get(node, ("•", node))
+        headline = next((e for e in entries if e["kind"] in ("info", "summary", "decision")), None)
+        tool_steps = [e for e in entries if e["kind"] in ("tool_call", "tool_result")]
+
+        st.markdown(f"**{icon} {label}**")
+        if headline:
+            st.write(headline["text"])
+        if tool_steps:
+            with st.expander(f"{len(tool_steps) // 2} tool call(s)"):
+                for step in tool_steps:
+                    if step["kind"] == "tool_call":
+                        st.code(f"{step['tool']}({step['args']})", language="python")
+                    else:
+                        result = step["result"]
+                        if isinstance(result, (dict, list)):
+                            st.json(result)
+                        else:
+                            st.text(str(result))
 
 
 st.title("🛡️ Fraud Guard — Live Transaction Review")
@@ -61,8 +98,7 @@ with submit_tab:
             st.write(case["aggregate_reasoning"])
 
             with st.expander("Investigation trace"):
-                for line in case["audit_log"]:
-                    st.text(line)
+                render_trace(case["audit_log"])
 
             approve_col, decline_col, escalate_col = st.columns(3)
             if approve_col.button("✅ Approve", key=f"approve_{case['thread_id']}", use_container_width=True):
@@ -104,5 +140,4 @@ with history_tab:
         )
         selected_case = next(case for case in history if case["thread_id"] == selected_thread)
         with st.expander("Full audit trail", expanded=True):
-            for line in selected_case["audit_log"]:
-                st.text(line)
+            render_trace(selected_case["audit_log"])

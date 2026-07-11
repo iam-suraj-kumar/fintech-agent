@@ -2,6 +2,7 @@ import uuid
 
 from langgraph.config import get_store
 
+import audit
 from state import TransactionState
 
 MEMORY_NAMESPACE_PREFIX = "account_memory"
@@ -39,5 +40,5 @@ def resolution_node(state: TransactionState) -> dict:
 
     return {
         "final_decision": final,
-        "audit_log": [f"resolution: final_decision={final}"],
+        "audit_log": [audit.decision("resolution", f"final_decision={final}")],
     }

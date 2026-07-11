@@ -13,7 +13,7 @@ class TransactionState(TypedDict):
     aggregate_reasoning: str | None
     human_decision: Literal["approve", "decline", "escalate"] | None
     final_decision: str
-    audit_log: Annotated[list[str], operator.add]
+    audit_log: Annotated[list[dict], operator.add]
 
 
 def new_state(transaction: dict) -> TransactionState:
