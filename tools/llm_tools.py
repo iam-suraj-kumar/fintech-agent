@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 
 from tools.mock_apis import (
+    check_sanctions_list as _check_sanctions_list,
     get_account_history as _get_account_history,
     get_device_fingerprint as _get_device_fingerprint,
     get_geolocation as _get_geolocation,
@@ -37,3 +38,9 @@ def merchant_risk_score(merchant_id: str) -> dict:
 def similar_fraud_cases(description: str) -> list[str]:
     """Search a database of past confirmed fraud cases for ones textually similar to the given transaction description."""
     return _search_similar_fraud_cases(description)
+
+
+@tool
+def sanctions_check(beneficiary_name: str) -> dict:
+    """Check whether a wire transfer beneficiary name appears on a sanctions watchlist."""
+    return _check_sanctions_list(beneficiary_name)

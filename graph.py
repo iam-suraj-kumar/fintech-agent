@@ -5,6 +5,7 @@ from typing import Callable
 from dotenv import load_dotenv
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.store.sqlite import SqliteStore
 
 load_dotenv()
 
@@ -34,7 +35,7 @@ NODE_NAMES = [
 ]
 
 
-def build_graph(nodes: NodeMap, checkpointer=None):
+def build_graph(nodes: NodeMap, checkpointer=None, store=None):
     builder = StateGraph(TransactionState)
 
     for name in NODE_NAMES:
@@ -66,7 +67,7 @@ def build_graph(nodes: NodeMap, checkpointer=None):
     builder.add_edge("human_review", "resolution")
     builder.add_edge("resolution", END)
 
-    return builder.compile(checkpointer=checkpointer, interrupt_before=["human_review"])
+    return builder.compile(checkpointer=checkpointer, store=store, interrupt_before=["human_review"])
 
 
 DEFAULT_NODES: NodeMap = {
@@ -83,8 +84,14 @@ DEFAULT_NODES: NodeMap = {
 }
 
 _checkpoint_path = os.environ.get("CHECKPOINT_DB_PATH", "checkpoints.sqlite")
+_memory_path = os.environ.get("MEMORY_DB_PATH", "account_memory.sqlite")
 # check_same_thread=False: Streamlit and langgraph dev may access the
 # connection from a different thread than the one that created it.
 _conn = sqlite3.connect(_checkpoint_path, check_same_thread=False)
 checkpointer = SqliteSaver(_conn)
-graph = build_graph(DEFAULT_NODES, checkpointer=checkpointer)
+
+_memory_conn = sqlite3.connect(_memory_path, check_same_thread=False, isolation_level=None)
+store = SqliteStore(_memory_conn)
+store.setup()
+
+graph = build_graph(DEFAULT_NODES, checkpointer=checkpointer, store=store)

@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
-checkpoints.sqlite
+checkpoints.sqlite*
+account_memory.sqlite*
 .pytest_cache/
 .chroma/

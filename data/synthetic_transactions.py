@@ -40,6 +40,7 @@ SCENARIOS = {
         "timestamp": datetime(2026, 7, 11, 16, 30, tzinfo=timezone.utc).isoformat(),
         "type": "wire_transfer",
         "beneficiary_is_new": True,
+        "beneficiary_name": "Global Trading Partners LLC",
     },
     "borderline_restart_demo": {
         "transaction_id": "txn_004",
@@ -52,6 +53,7 @@ SCENARIOS = {
         "timestamp": datetime(2026, 7, 11, 17, 0, tzinfo=timezone.utc).isoformat(),
         "type": "wire_transfer",
         "beneficiary_is_new": True,
+        "beneficiary_name": "Silk Road Holdings Ltd",
     },
 }
 

@@ -69,7 +69,7 @@ Each box is one LangGraph node with one job:
 | **`pattern_detector`** | Does this resemble fraud patterns seen before, not just this account's own history? | ReAct agent with `account_history` + a RAG tool (`similar_fraud_cases`) searching a small Chroma store of past confirmed fraud cases |
 | **`aggregator`** | Three independent opinions need to become *one* decision with a coherent explanation | LLM call with structured output (`AggregatorOutput`) combining all three findings into a `composite_score` + plain-English rationale. Routes to `human_review` (score ≥ 0.5) or straight to `resolution` |
 | **`human_review`** | An LLM shouldn't autonomously block a legitimate $18k wire transfer, or wave through a borderline one, with nobody accountable | LangGraph `interrupt_before` node — execution genuinely pauses here, checkpointed to disk, until a human clicks Approve/Decline/Escalate in the Streamlit UI |
-| **`resolution`** | Compliance needs one final answer and a full reasoning trail, not just a score | Combines `triage_decision`/`human_decision` into `final_decision` and closes out the audit log |
+| **`resolution`** | Compliance needs one final answer and a full reasoning trail, not just a score | Combines `triage_decision`/`human_decision` into `final_decision`, closes out the audit log, and writes the decision to account memory (see below) |
 
 The three specialist agents (`transaction_analyst`, `identity_verifier`,
 `pattern_detector`) all run **in parallel** — LangGraph fans out from
@@ -85,6 +85,28 @@ LangGraph's `SqliteSaver`, keyed by a unique thread ID per submission. This
 is what lets a paused `human_review` survive killing and restarting the
 whole process — the pending case is still there because it was never only
 in memory.
+
+**Long-term account memory**: separately from per-run checkpointing, a
+`SqliteStore` (`account_memory.sqlite`) gives the graph memory that persists
+*across* different transactions on the same account, not just within one
+run. `resolution_node` writes `{final_decision, composite_score}` into
+`(account_memory, account_id)` after every decision (`agents/resolution.py`);
+`triage_node` reads that account's history back via LangGraph's
+`get_store()` and adds up to +0.3 to the score for prior escalations/declines
+(`agents/triage.py`). Concretely: `borderline_wire` and
+`borderline_restart_demo` share the same account (`acct_2002`) — submit one,
+escalate it, then submit the other, and its triage score will visibly be
+higher than it would've been on a clean account, because triage now
+remembers the account has a track record.
+
+**A new agent skill**: `transaction_analyst` also has a `sanctions_check`
+tool (`tools/mock_apis.py` → `tools/llm_tools.py`) that looks up a wire
+transfer's `beneficiary_name` against a mock OFAC-style watchlist.
+`borderline_wire`'s beneficiary is clean; `borderline_restart_demo`'s
+(`"Silk Road Holdings Ltd"`) is flagged, and the agent leads its writeup
+with that finding rather than burying it — a good moment to point out that
+adding an agent capability is just adding a tool to a list, no graph changes
+required.
 
 **The MCP bonus**: `identity_verifier`'s `geolocation` tool isn't canned —
 it's served by a real local MCP server (`mcp_server/geolocation_server.py`)
@@ -129,9 +151,17 @@ streamlit run ui/app.py
 4. Submit `borderline_restart_demo`, let it reach `human_review`, then kill
    and restart `langgraph dev` (and/or the Streamlit process) — the pending
    case is still there, checkpointed to `checkpoints.sqlite`. Approve it to
-   finish.
-5. Recap: one node = one responsibility, conditional edges = business logic,
-   the checkpointer buys durability for free.
+   finish. Point out that `transaction_analyst`'s writeup flagged the
+   beneficiary via the `sanctions_check` tool — a new agent skill, added by
+   giving one specialist one more tool, no graph changes.
+5. Immediately resubmit `borderline_wire` (same account as step 4,
+   `acct_2002`) and open its investigation trace — the triage score is
+   visibly higher than the first time, because `triage` now remembers this
+   account escalated before. That's the `SqliteStore` long-term memory, not
+   the per-run checkpointer.
+6. Recap: one node = one responsibility, conditional edges = business logic,
+   the checkpointer buys per-run durability for free, the store buys
+   cross-run memory for free.
 
 Bonus MCP beat: point out that `identity_verifier`'s geolocation tool isn't
 canned — it's served by a real MCP server (`mcp_server/geolocation_server.py`)
@@ -160,7 +190,7 @@ agents/
   human_review.py              # interrupt_before target
   resolution.py
 tools/
-  mock_apis.py                 # account/device/geo/merchant lookups + fraud-case RAG
+  mock_apis.py                 # account/device/geo/merchant/sanctions lookups + fraud-case RAG
   llm_tools.py                 # @tool wrappers for the specialist agents
   mcp_geolocation.py            # lazy client for the real geolocation MCP server
 data/

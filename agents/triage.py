@@ -1,3 +1,5 @@
+from langgraph.config import get_store
+
 from state import TransactionState
 from tools.mock_apis import (
     get_account_history,
@@ -8,6 +10,22 @@ from tools.mock_apis import (
 
 AUTO_DECLINE_THRESHOLD = 0.65
 INVESTIGATE_THRESHOLD = 0.30
+MEMORY_NAMESPACE_PREFIX = "account_memory"
+
+
+def _account_memory_penalty(account_id: str) -> float:
+    # get_store() only works inside a graph compiled with store=...; direct
+    # unit-style calls to triage_node/_compute_triage_score without a
+    # compiled graph context fall back to no penalty rather than erroring.
+    try:
+        store = get_store()
+    except RuntimeError:
+        return 0.0
+
+    past_decisions = store.search((MEMORY_NAMESPACE_PREFIX, account_id))
+    escalations = sum(1 for item in past_decisions if item.value.get("final_decision") == "escalated")
+    declines = sum(1 for item in past_decisions if item.value.get("final_decision") == "declined")
+    return min(0.15 * escalations + 0.10 * declines, 0.3)
 
 
 def _compute_triage_score(transaction: dict) -> float:
@@ -36,6 +54,8 @@ def _compute_triage_score(transaction: dict) -> float:
         current_country = get_geolocation(transaction["ip"])["country"]
         if prior_country != current_country:
             score += 0.55
+
+    score += _account_memory_penalty(transaction["account_id"])
 
     return min(score, 1.0)
 

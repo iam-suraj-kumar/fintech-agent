@@ -21,6 +21,13 @@ MERCHANT_RISK = {
     "merch_electronics_1": {"tier": "medium", "score": 0.35},
 }
 
+SANCTIONS_LIST = {
+    "silk road holdings ltd": {
+        "list_name": "OFAC SDN (mock)",
+        "reason": "shell entity linked to a prior enforcement action",
+    },
+}
+
 FRAUD_CASE_TEXTS = [
     "Card-not-present purchase for $2,340 at an electronics merchant the "
     "cardholder never used before, from a new device, immediately followed "
@@ -53,6 +60,13 @@ def get_geolocation(ip: str) -> dict:
 
 def get_merchant_risk_score(merchant_id: str) -> dict:
     return MERCHANT_RISK.get(merchant_id, {"tier": "medium", "score": 0.3})
+
+
+def check_sanctions_list(beneficiary_name: str) -> dict:
+    entry = SANCTIONS_LIST.get(beneficiary_name.strip().lower())
+    if entry:
+        return {"on_list": True, **entry}
+    return {"on_list": False, "list_name": None, "reason": None}
 
 
 def _get_store():
