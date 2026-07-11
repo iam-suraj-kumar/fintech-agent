@@ -2,8 +2,11 @@ import os
 import sqlite3
 from typing import Callable
 
+from dotenv import load_dotenv
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
+
+load_dotenv()
 
 from agents.aggregator import aggregator_node, route_after_aggregator
 from agents.human_review import human_review_node
