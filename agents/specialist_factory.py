@@ -11,7 +11,7 @@ DEFAULT_MODEL = "gpt-4o-mini"
 def make_specialist_node(
     name: str,
     state_key: str,
-    tools: list,
+    tools: list | Callable[[], list],
     system_prompt: str,
     model: str = DEFAULT_MODEL,
 ) -> Callable[[TransactionState], dict]:
@@ -19,8 +19,9 @@ def make_specialist_node(
 
     def _get_agent():
         if "agent" not in agent_holder:
+            resolved_tools = tools() if callable(tools) else tools
             llm = ChatOpenAI(model=model, temperature=0)
-            agent_holder["agent"] = create_react_agent(llm, tools, prompt=system_prompt)
+            agent_holder["agent"] = create_react_agent(llm, resolved_tools, prompt=system_prompt)
         return agent_holder["agent"]
 
     def node(state: TransactionState) -> dict:

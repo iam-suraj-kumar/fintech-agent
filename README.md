@@ -3,7 +3,10 @@
 A LangGraph demo built for a conference talk: a tiered fraud-detection
 pipeline that only pays for expensive multi-agent LLM investigation on
 borderline transactions, pauses for human review when risk stays high, and
-survives a process restart mid-review thanks to checkpointing.
+survives a process restart mid-review thanks to checkpointing. The
+`identity_verifier` agent's geolocation lookup is backed by a real local MCP
+server hitting a live public IP-geolocation API — everything else stays
+synthetic/mock so the rest of the demo runs offline and predictably.
 
 ## Setup
 
@@ -43,6 +46,12 @@ streamlit run ui/app.py
    finish.
 5. Recap: one node = one responsibility, conditional edges = business logic,
    the checkpointer buys durability for free.
+
+Bonus MCP beat: point out that `identity_verifier`'s geolocation tool isn't
+canned — it's served by a real MCP server (`mcp_server/geolocation_server.py`)
+making a live HTTP call to ip-api.com. For `impossible_travel`, the resolved
+IP genuinely geolocates to Nigeria, which is what makes the agent's writeup
+convincing rather than scripted.
 
 ## Architecture
 
@@ -90,7 +99,7 @@ agents/
   triage.py                   # deterministic rules + auto_approve/auto_decline
   specialist_factory.py       # shared lazy ReAct node builder
   transaction_analyst.py
-  identity_verifier.py
+  identity_verifier.py         # uses the live MCP geolocation tool
   pattern_detector.py
   aggregator.py                # structured-output fan-in node
   human_review.py              # interrupt_before target
@@ -98,9 +107,12 @@ agents/
 tools/
   mock_apis.py                 # account/device/geo/merchant lookups + fraud-case RAG
   llm_tools.py                 # @tool wrappers for the specialist agents
+  mcp_geolocation.py            # lazy client for the real geolocation MCP server
 data/
-  synthetic_transactions.py    # the 4 scripted scenarios
+  synthetic_transactions.py    # the 4 scripted scenarios (each has a real_ip too)
 ui/
   logic.py                     # graph-driving functions (queue, resume)
   app.py                       # Streamlit rendering
+mcp_server/
+  geolocation_server.py         # FastMCP server calling ip-api.com for real geolocation
 ```
