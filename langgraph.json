@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "fraud_guard": "./graph.py:graph"
+  },
+  "env": ".env"
+}
