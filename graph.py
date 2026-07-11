@@ -85,6 +85,17 @@ DEFAULT_NODES: NodeMap = {
 
 _checkpoint_path = os.environ.get("CHECKPOINT_DB_PATH", "checkpoints.sqlite")
 _memory_path = os.environ.get("MEMORY_DB_PATH", "account_memory.sqlite")
+
+if os.environ.get("RESET_MEMORY_ON_START", "").lower() in ("1", "true", "yes"):
+    # Only safe because this runs once at process start, before any
+    # connection below is opened - never delete these files while another
+    # process already has them open (breaks its connection, see incident).
+    for _suffix in ("", "-wal", "-shm"):
+        try:
+            os.remove(_memory_path + _suffix)
+        except FileNotFoundError:
+            pass
+
 # check_same_thread=False: Streamlit and langgraph dev may access the
 # connection from a different thread than the one that created it.
 _conn = sqlite3.connect(_checkpoint_path, check_same_thread=False)

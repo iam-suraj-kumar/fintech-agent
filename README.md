@@ -136,6 +136,12 @@ pip install -r requirements.txt
 cp .env.example .env  # then fill in OPENAI_API_KEY
 ```
 
+Set `RESET_MEMORY_ON_START=true` in `.env` before a rehearsal or the actual
+talk to wipe account memory on every app start — otherwise repeated testing
+on the same account (`borderline_wire`/`borderline_restart_demo` both use
+`acct_2002`) accumulates enough escalation/decline history that triage
+starts auto-declining them outright instead of routing to investigation.
+
 ## Run LangGraph Studio
 
 ```bash
