@@ -61,6 +61,35 @@ def render_trace(audit_log: list[dict]) -> None:
                             st.text(str(result))
 
 
+with st.sidebar:
+    st.header("📖 Terminology")
+
+    st.markdown("**Source**")
+    st.caption("📜 curated — one of the 4 hand-scripted demo cases")
+    st.caption("🎲 generated — synthesized deterministically from the ID you typed")
+
+    st.markdown("**Triage decision**")
+    st.caption("`auto_approve` — score < 0.30, resolved instantly, no LLM calls")
+    st.caption("`investigate` — score 0.30–0.65, fans out to the 3 specialist agents")
+    st.caption("`auto_decline` — score ≥ 0.65, resolved instantly, no LLM calls")
+
+    st.markdown("**Composite score**")
+    st.caption(
+        "Set only by the aggregator, after the specialists run. Stays **—** for "
+        "auto_approve/auto_decline transactions since they skip investigation "
+        "entirely — that's the point of the tiered design, not a missing value."
+    )
+
+    st.markdown("**Risk badge** *(on composite score)*")
+    st.caption(":green[LOW] < 0.30 · :orange[MEDIUM] 0.30–0.65 · :red[HIGH] ≥ 0.65")
+
+    st.markdown("**Final decision**")
+    st.caption("✅ approved · ⛔ declined · 🚨 escalated (sent to a senior reviewer)")
+
+    st.markdown("**Investigation trace nodes**")
+    for _node_key, (_icon, _label) in NODE_LABELS.items():
+        st.caption(f"{_icon} {_label}")
+
 st.title("🛡️ Fraud Guard — Live Transaction Review")
 st.caption(
     "LangGraph fraud pipeline: deterministic triage → parallel specialist agents → human-in-the-loop review"
