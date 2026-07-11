@@ -90,9 +90,12 @@ with history_tab:
         for case in history:
             txn = case["transaction"]
             decision_label = f"{DECISION_ICON.get(case['final_decision'], '')} {case['final_decision']}"
+            composite_label = (
+                f"{case['composite_score']:.2f}" if case["composite_score"] is not None else "—"
+            )
             rows.append(
                 f"| {txn['transaction_id']} | ${txn['amount']:,.2f} | {case['triage_decision']} "
-                f"| {case['composite_score']:.2f} | {decision_label} |"
+                f"| {composite_label} | {decision_label} |"
             )
         st.markdown("\n".join(rows))
 
