@@ -5,8 +5,8 @@ from data.synthetic_transactions import get_scenario
 from state import new_state
 
 
-def start_transaction(graph: Any, scenario_name: str) -> str:
-    transaction = get_scenario(scenario_name)
+def start_transaction(graph: Any, transaction_id_input: str) -> str:
+    transaction = get_scenario(transaction_id_input)
     # A fresh, unique thread_id per submission — reusing the scenario's fixed
     # transaction_id as the thread_id would append this run's audit_log onto
     # any earlier run's history on that same thread (audit_log's reducer is

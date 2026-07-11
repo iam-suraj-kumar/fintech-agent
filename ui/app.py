@@ -69,15 +69,26 @@ st.caption(
 submit_tab, history_tab = st.tabs(["Submit & Review", "Decision History"])
 
 with submit_tab:
-    scenario_col, button_col = st.columns([3, 1])
-    with scenario_col:
-        scenario_choice = st.selectbox("Scenario", list(SCENARIOS.keys()), label_visibility="collapsed")
+    if "txn_id_input" not in st.session_state:
+        st.session_state.txn_id_input = "clean_coffee"
+
+    def _set_quick_pick(name: str) -> None:
+        st.session_state.txn_id_input = name
+
+    st.caption("Type any transaction ID — known IDs use their scripted case, anything else is synthesized:")
+    quick_cols = st.columns(len(SCENARIOS))
+    for col, name in zip(quick_cols, SCENARIOS.keys()):
+        col.button(name, key=f"quickpick_{name}", on_click=_set_quick_pick, args=(name,), use_container_width=True)
+
+    id_col, button_col = st.columns([3, 1])
+    with id_col:
+        st.text_input("Transaction ID", key="txn_id_input", label_visibility="collapsed")
     with button_col:
         submit_clicked = st.button("Submit transaction", type="primary", use_container_width=True)
     if submit_clicked:
         with st.spinner("Running triage → investigation..."):
-            thread_id = start_transaction(graph, scenario_choice)
-        st.success(f"Submitted `{scenario_choice}` — thread `{thread_id}`")
+            thread_id = start_transaction(graph, st.session_state.txn_id_input)
+        st.success(f"Submitted `{st.session_state.txn_id_input}` — thread `{thread_id}`")
 
     st.divider()
     st.subheader("Pending human review")
@@ -91,7 +102,10 @@ with submit_tab:
         with st.container(border=True):
             header_col, badge_col = st.columns([3, 1])
             with header_col:
-                st.markdown(f"**{txn['transaction_id']}** — ${txn['amount']:,.2f} at `{txn['merchant_id']}`")
+                source_tag = "📜 curated" if txn.get("source") == "curated" else "🎲 generated"
+                st.markdown(
+                    f"**{txn['transaction_id']}** — ${txn['amount']:,.2f} at `{txn['merchant_id']}` · {source_tag}"
+                )
             with badge_col:
                 st.markdown(risk_badge(case["composite_score"]))
 
@@ -122,15 +136,19 @@ with history_tab:
     else:
         # st.dataframe/st.table route through pyarrow, which segfaults under
         # Python 3.14 on this machine - render a plain markdown table instead.
-        rows = ["| Transaction | Amount | Triage | Composite score | Decision |", "|---|---|---|---|---|"]
+        rows = [
+            "| Transaction | Source | Amount | Triage | Composite score | Decision |",
+            "|---|---|---|---|---|---|",
+        ]
         for case in history:
             txn = case["transaction"]
+            source_label = "📜 curated" if txn.get("source") == "curated" else "🎲 generated"
             decision_label = f"{DECISION_ICON.get(case['final_decision'], '')} {case['final_decision']}"
             composite_label = (
                 f"{case['composite_score']:.2f}" if case["composite_score"] is not None else "—"
             )
             rows.append(
-                f"| {txn['transaction_id']} | ${txn['amount']:,.2f} | {case['triage_decision']} "
+                f"| {txn['transaction_id']} | {source_label} | ${txn['amount']:,.2f} | {case['triage_decision']} "
                 f"| {composite_label} | {decision_label} |"
             )
         st.markdown("\n".join(rows))
