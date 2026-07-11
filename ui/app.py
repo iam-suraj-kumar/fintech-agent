@@ -209,8 +209,8 @@ with submit_tab:
         submit_clicked = st.button("Submit transaction", type="primary", use_container_width=True)
     if submit_clicked:
         with st.spinner("Running triage → investigation..."):
-            thread_id = start_transaction(graph, st.session_state.txn_id_input)
-        st.success(f"Submitted `{st.session_state.txn_id_input}` — thread `{thread_id}`")
+            start_transaction(graph, st.session_state.txn_id_input)
+        st.success(f"Submitted `{st.session_state.txn_id_input}`")
 
     st.divider()
     st.subheader("Pending human review")
