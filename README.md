@@ -116,6 +116,17 @@ resolved IP genuinely geolocates to Nigeria, which is what makes the agent's
 writeup convincing rather than scripted. Everything else in the demo stays
 synthetic/mock on purpose, so the rest of it runs offline and predictably.
 
+**Any transaction ID, not just a fixed menu**: the UI takes free-text
+input, not a scenario dropdown (`data/synthetic_transactions.py`). The four
+demo scenarios above are still reachable by name or by their own
+`transaction_id` (`txn_001`-`txn_004`) — that's what the quick-pick buttons
+in the UI do — but typing *anything else* deterministically synthesizes a
+plausible transaction by hashing the ID into a seeded RNG and drawing from a
+larger pool of accounts/merchants/devices/geos, with roughly a 1-in-7 chance
+of leaning risky. Same ID always reproduces the same transaction (so it's
+still rehearsable), but it's no longer a closed catalog — type whatever
+transaction ID an audience member shouts out and get a real investigation.
+
 ## Setup
 
 ```bash
