@@ -84,20 +84,17 @@ with history_tab:
     if not history:
         st.info("No transactions have been resolved yet.")
     else:
-        st.dataframe(
-            [
-                {
-                    "Transaction": case["transaction"]["transaction_id"],
-                    "Amount": f"${case['transaction']['amount']:,.2f}",
-                    "Triage": case["triage_decision"],
-                    "Composite score": case["composite_score"],
-                    "Decision": f"{DECISION_ICON.get(case['final_decision'], '')} {case['final_decision']}",
-                }
-                for case in history
-            ],
-            use_container_width=True,
-            hide_index=True,
-        )
+        # st.dataframe/st.table route through pyarrow, which segfaults under
+        # Python 3.14 on this machine - render a plain markdown table instead.
+        rows = ["| Transaction | Amount | Triage | Composite score | Decision |", "|---|---|---|---|---|"]
+        for case in history:
+            txn = case["transaction"]
+            decision_label = f"{DECISION_ICON.get(case['final_decision'], '')} {case['final_decision']}"
+            rows.append(
+                f"| {txn['transaction_id']} | ${txn['amount']:,.2f} | {case['triage_decision']} "
+                f"| {case['composite_score']:.2f} | {decision_label} |"
+            )
+        st.markdown("\n".join(rows))
 
         selected_thread = st.selectbox(
             "View full trace for", [case["thread_id"] for case in history]
