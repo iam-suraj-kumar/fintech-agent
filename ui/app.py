@@ -90,12 +90,105 @@ with st.sidebar:
     for _node_key, (_icon, _label) in NODE_LABELS.items():
         st.caption(f"{_icon} {_label}")
 
-st.title("🛡️ Fraud Guard — Live Transaction Review")
-st.caption(
-    "LangGraph fraud pipeline: deterministic triage → parallel specialist agents → human-in-the-loop review"
+st.markdown(
+    """
+    <style>
+    .hero {
+        background: linear-gradient(135deg, #2F6FED 0%, #1B4FBF 100%);
+        color: white; padding: 2rem 2.5rem; border-radius: 16px; margin-bottom: 1.25rem;
+    }
+    .hero h1 { color: white; margin: 0 0 0.4rem 0; font-size: 2.1rem; }
+    .hero p { color: #DCE6FF; margin: 0; font-size: 1.05rem; }
+    .problem-statement {
+        background: #F4F7FB; border-left: 4px solid #2F6FED; padding: 1.1rem 1.4rem;
+        border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.98rem; line-height: 1.6;
+    }
+    .problem-statement b { color: #1B4FBF; }
+    .outcome-card {
+        border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem;
+        border: 1px solid #E5E9F0; background: #FFFFFF;
+    }
+    .outcome-card h4 { margin: 0 0 0.5rem 0; }
+    .outcome-card.approve { border-left: 5px solid #16A34A; }
+    .outcome-card.decline { border-left: 5px solid #DC2626; }
+    .outcome-card.investigate { border-left: 5px solid #D97706; }
+    </style>
+    <div class="hero">
+        <h1>🛡️ Fraud Guard</h1>
+        <p>Live transaction review — deterministic triage, parallel specialist investigation, human-in-the-loop review</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-submit_tab, history_tab = st.tabs(["Submit & Review", "Decision History"])
+st.markdown(
+    """
+    <div class="problem-statement">
+    <b>The problem.</b> Every transaction carries risk. Block too aggressively and
+    legitimate customers get turned away; look too little and fraud slips
+    through, at real financial and reputational cost. Investigating every
+    transaction with the same depth is too slow and too expensive to do at
+    scale — but a system that treats every case with the same rigid rules is
+    too blunt to catch what matters and too quick to flag what doesn't.
+    Fraud Guard resolves the overwhelming majority of transactions instantly
+    on their own, reserves deeper investigation for the genuinely ambiguous
+    ones, and keeps a human accountable for any decision with real
+    consequences — with a full explanation behind every outcome.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+how_it_works_tab, submit_tab, history_tab = st.tabs(["How It Works", "Submit & Review", "Decision History"])
+
+with how_it_works_tab:
+    st.subheader("Every transaction ends up in one of five places")
+
+    st.markdown(
+        """
+        <div class="outcome-card approve">
+        <h4>✅ Auto-approve</h4>
+        <b>Trigger:</b> initial screening scores the transaction as low-risk.<br>
+        <b>What happens:</b> resolved instantly — no further investigation, no review needed.<br>
+        <b>Example:</b> <code>clean_coffee</code> — a small, ordinary purchase from a familiar device.
+        </div>
+
+        <div class="outcome-card decline">
+        <h4>⛔ Auto-decline</h4>
+        <b>Trigger:</b> initial screening finds enough strong red flags at once to be confident this is fraud.<br>
+        <b>What happens:</b> blocked instantly — the signals already speak for themselves.<br>
+        <b>Example:</b> <code>impossible_travel</code> — a purchase from a brand-new device in a country
+        the account has never been active in, minutes after activity somewhere else entirely.
+        </div>
+
+        <div class="outcome-card investigate">
+        <h4>🔎 Investigate → Approved</h4>
+        <b>Trigger:</b> initial signals are ambiguous — not clearly safe, not clearly fraudulent.<br>
+        <b>What happens:</b> a deeper investigation weighs the account's history, device and location,
+        and comparison to known fraud patterns; a reviewer examines the findings and decides the
+        activity is legitimate.<br>
+        <b>Example:</b> submit <code>borderline_wire</code> and click Approve.
+        </div>
+
+        <div class="outcome-card investigate">
+        <h4>🔎 Investigate → Declined</h4>
+        <b>Trigger:</b> same as above — ambiguous initial signals.<br>
+        <b>What happens:</b> the same investigation runs, but the reviewer determines the activity is
+        fraudulent and blocks it.<br>
+        <b>Example:</b> submit <code>borderline_wire</code> and click Decline instead.
+        </div>
+
+        <div class="outcome-card investigate">
+        <h4>🔎 Investigate → Escalated</h4>
+        <b>Trigger:</b> same as above, but the reviewer isn't confident enough to decide alone.<br>
+        <b>What happens:</b> the case is sent to a senior reviewer for a final call, rather than being
+        resolved on the spot.<br>
+        <b>Example:</b> <code>borderline_restart_demo</code> — flagged beneficiary, escalate rather than
+        decide immediately.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 with submit_tab:
     if "txn_id_input" not in st.session_state:
