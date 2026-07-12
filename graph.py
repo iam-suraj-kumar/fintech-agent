@@ -86,7 +86,13 @@ DEFAULT_NODES: NodeMap = {
 _checkpoint_path = os.environ.get("CHECKPOINT_DB_PATH", "checkpoints.sqlite")
 _memory_path = os.environ.get("MEMORY_DB_PATH", "account_memory.sqlite")
 
-if os.environ.get("RESET_MEMORY_ON_START", "").lower() in ("1", "true", "yes"):
+if os.environ.get("RESET_MEMORY_ON_START", "true").lower() not in ("0", "false", "no"):
+    # Defaults on: repeated demo/testing runs otherwise accumulate account
+    # memory until triage auto-declines borderline scenarios outright,
+    # skipping investigation entirely (see incident). Set to false in .env
+    # for the one demo beat that wants memory to persist across separate
+    # CLI invocations (each is its own process, so this runs every time).
+    #
     # Only safe because this runs once at process start, before any
     # connection below is opened - never delete these files while another
     # process already has them open (breaks its connection, see incident).
