@@ -154,8 +154,10 @@ Opens a local Studio UI rendering the `fraud_guard` graph. Requires
 ## Run the review UI
 
 ```bash
-streamlit run ui/app.py
+python run_streamlit.py
 ```
+
+This will choose an available random local port and start Streamlit there.
 
 ## Demo script
 
