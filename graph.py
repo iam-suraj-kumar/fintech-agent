@@ -9,15 +9,15 @@ from langgraph.store.sqlite import SqliteStore
 
 load_dotenv()
 
-from agents.aggregator import aggregator_node, route_after_aggregator
-from agents.human_review import human_review_node
 from agents.identity_verifier import identity_verifier_node
-from agents.ingest import ingest_node
 from agents.pattern_detector import pattern_detector_node
-from agents.resolution import resolution_node
 from agents.transaction_analyst import transaction_analyst_node
-from agents.triage import auto_approve_node, auto_decline_node, route_after_triage, triage_node
-from state import TransactionState
+from core.state import TransactionState
+from nodes.aggregator import aggregator_node, route_after_aggregator
+from nodes.human_review import human_review_node
+from nodes.ingest import ingest_node
+from nodes.resolution import resolution_node
+from nodes.triage import auto_approve_node, auto_decline_node, route_after_triage, triage_node
 
 NodeMap = dict[str, Callable]
 

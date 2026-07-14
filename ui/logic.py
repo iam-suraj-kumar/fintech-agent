@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from data.synthetic_transactions import get_scenario
-from state import new_state
+from core.state import new_state
 
 
 def start_transaction(graph: Any, transaction_id_input: str) -> str:

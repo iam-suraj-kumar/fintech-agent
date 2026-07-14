@@ -1,4 +1,4 @@
-from agents.specialist_factory import make_specialist_node
+from core.specialist_factory import make_specialist_node
 from tools.llm_tools import device_fingerprint
 from tools.mcp_geolocation import get_geolocation_tool
 

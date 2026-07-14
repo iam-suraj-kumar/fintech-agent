@@ -1,4 +1,4 @@
-from agents.specialist_factory import make_specialist_node
+from core.specialist_factory import make_specialist_node
 from tools.llm_tools import account_history, similar_fraud_cases
 
 SYSTEM_PROMPT = (

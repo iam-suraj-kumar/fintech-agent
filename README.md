@@ -8,6 +8,93 @@ survives a process restart mid-review thanks to checkpointing. The
 server hitting a live public IP-geolocation API — everything else stays
 synthetic/mock so the rest of the demo runs offline and predictably.
 
+## Quickstart
+
+### 1. Setup
+
+```bash
+uv sync
+cp .env.example .env  # then fill in OPENAI_API_KEY
+```
+
+`uv sync` creates `.venv` and installs everything from `uv.lock`. Prefix the
+run commands below with `uv run` (e.g. `uv run streamlit run ui/app.py ...`),
+or run `source .venv/bin/activate` once per shell instead.
+
+Set `RESET_MEMORY_ON_START=true` in `.env` before a rehearsal or the actual
+talk to wipe account memory on every app start — otherwise repeated testing
+on the same account (`borderline_wire`/`borderline_restart_demo` both use
+`acct_2002`) accumulates enough escalation/decline history that triage
+starts auto-declining them outright instead of routing to investigation.
+
+### 2. Run LangGraph Studio
+
+```bash
+uv run langgraph dev
+```
+
+Opens a local Studio UI rendering the `fraud_guard` graph. Requires
+`OPENAI_API_KEY` in `.env` to actually execute specialist/aggregator nodes.
+
+### 3. Run the review UI (Streamlit)
+
+```bash
+uv run streamlit run ui/app.py --server.port 8501
+```
+
+### 4. Run the CLI
+
+A terminal companion to the Streamlit UI — same graph, same database files,
+safe to run alongside it since both talk to the same checkpointed state.
+
+```bash
+uv run python cli.py submit clean_coffee        # submit a transaction, watch it investigate
+uv run python cli.py pending                     # list transactions awaiting human review
+uv run python cli.py review <thread_id> approve  # approve/decline/escalate a pending case
+uv run python cli.py history                     # show all resolved transactions
+```
+
+`submit` takes any transaction ID — the four demo scenario names
+(`clean_coffee`, `impossible_travel`, `borderline_wire`,
+`borderline_restart_demo`), their `txn_00N` IDs, or literally anything else,
+which deterministically synthesizes a plausible transaction (see "Any
+transaction ID, not just a fixed menu" under **How it works** below). If the
+transaction reaches `human_review`, `submit` prompts for a decision right
+there in the terminal.
+
+## Demo script
+
+1. Open Studio, walk through the graph diagram node by node.
+2. Submit `clean_coffee` — watch it blip straight to `auto_approve`.
+3. Submit `borderline_wire` — watch triage fan out to all three specialists
+   simultaneously, fan into `aggregator`, then pause at `human_review`.
+   Switch to the Streamlit UI, show the rationale, click **Approve**, watch
+   `resolution` complete in Studio.
+4. Submit `borderline_restart_demo`, let it reach `human_review`, then kill
+   and restart `langgraph dev` (and/or the Streamlit process) — the pending
+   case is still there, checkpointed to `checkpoints.sqlite`. Approve it to
+   finish. Point out that `transaction_analyst`'s writeup flagged the
+   beneficiary via the `sanctions_check` tool — a new agent skill, added by
+   giving one specialist one more tool, no graph changes.
+5. Immediately resubmit `borderline_wire` (same account as step 4,
+   `acct_2002`) and open its investigation trace — the triage score is
+   visibly higher than the first time, because `triage` now remembers this
+   account escalated before. That's the `SqliteStore` long-term memory, not
+   the per-run checkpointer.
+6. Recap: one node = one responsibility, conditional edges = business logic,
+   the checkpointer buys per-run durability for free, the store buys
+   cross-run memory for free.
+
+Bonus MCP beat: point out that `identity_verifier`'s geolocation tool isn't
+canned — it's served by a real MCP server (`mcp_server/geolocation_server.py`)
+making a live HTTP call to ip-api.com. For `impossible_travel`, the resolved
+IP genuinely geolocates to Nigeria, which is what makes the agent's writeup
+convincing rather than scripted.
+
+See `docs/superpowers/specs/2026-07-11-langgraph-fraud-demo-design.md` for
+the full design and `docs/superpowers/plans/2026-07-11-langgraph-fraud-demo.md`
+for the (unused) task-by-task TDD plan this was built from directly instead.
+
 ## The problem this solves
 
 A real fraud pipeline is stuck between two bad options:
@@ -63,7 +150,7 @@ Each box is one LangGraph node with one job:
 | Node | Problem it solves | What it does |
 |---|---|---|
 | **`ingest`** | Every run needs a consistent starting point | Records the transaction into state and starts the audit trail |
-| **`triage`** (`agents/triage.py`) | Don't spend LLM calls on the 95% of transactions that are obvious | Plain Python scoring against account history, device, merchant risk, and geo signals — no LLM. Routes to `auto_approve` (score < 0.30), `auto_decline` (score ≥ 0.65), or `investigate` (in between) |
+| **`triage`** (`nodes/triage.py`) | Don't spend LLM calls on the 95% of transactions that are obvious | Plain Python scoring against account history, device, merchant risk, and geo signals — no LLM. Routes to `auto_approve` (score < 0.30), `auto_decline` (score ≥ 0.65), or `investigate` (in between) |
 | **`transaction_analyst`** | Is this amount/merchant actually unusual for *this* account, not just in the abstract? | ReAct agent with `account_history` + `merchant_risk_score` tools |
 | **`identity_verifier`** | Is the device and location consistent with the real account owner? | ReAct agent with `device_fingerprint` + a **live** `geolocation` tool — the only part of the demo that hits a real external API (see MCP section below) |
 | **`pattern_detector`** | Does this resemble fraud patterns seen before, not just this account's own history? | ReAct agent with `account_history` + a RAG tool (`similar_fraud_cases`) searching a small Chroma store of past confirmed fraud cases |
@@ -77,7 +164,7 @@ The three specialist agents (`transaction_analyst`, `identity_verifier`,
 agent investigates an independent angle and none depends on another's
 output. That parallelism, the conditional routing at `triage` and
 `aggregator`, and the `human_review` interrupt are the three LangGraph
-mechanics this demo exists to show off — see `agents/specialist_factory.py`
+mechanics this demo exists to show off — see `core/specialist_factory.py`
 for the shared node-building logic all three specialists are built from.
 
 **Persistence**: every run is checkpointed to `checkpoints.sqlite` via
@@ -90,10 +177,10 @@ in memory.
 `SqliteStore` (`account_memory.sqlite`) gives the graph memory that persists
 *across* different transactions on the same account, not just within one
 run. `resolution_node` writes `{final_decision, composite_score}` into
-`(account_memory, account_id)` after every decision (`agents/resolution.py`);
+`(account_memory, account_id)` after every decision (`nodes/resolution.py`);
 `triage_node` reads that account's history back via LangGraph's
 `get_store()` and adds up to +0.3 to the score for prior escalations/declines
-(`agents/triage.py`). Concretely: `borderline_wire` and
+(`nodes/triage.py`). Concretely: `borderline_wire` and
 `borderline_restart_demo` share the same account (`acct_2002`) — submit one,
 escalate it, then submit the other, and its triage score will visibly be
 higher than it would've been on a clean account, because triage now
@@ -127,84 +214,23 @@ of leaning risky. Same ID always reproduces the same transaction (so it's
 still rehearsable), but it's no longer a closed catalog — type whatever
 transaction ID an audience member shouts out and get a real investigation.
 
-## Setup
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env  # then fill in OPENAI_API_KEY
-```
-
-Set `RESET_MEMORY_ON_START=true` in `.env` before a rehearsal or the actual
-talk to wipe account memory on every app start — otherwise repeated testing
-on the same account (`borderline_wire`/`borderline_restart_demo` both use
-`acct_2002`) accumulates enough escalation/decline history that triage
-starts auto-declining them outright instead of routing to investigation.
-
-## Run LangGraph Studio
-
-```bash
-langgraph dev
-```
-
-Opens a local Studio UI rendering the `fraud_guard` graph. Requires
-`OPENAI_API_KEY` in `.env` to actually execute specialist/aggregator nodes.
-
-## Run the review UI
-
-```bash
-python run_streamlit.py
-```
-
-This will choose an available random local port and start Streamlit there.
-
-## Demo script
-
-1. Open Studio, walk through the graph diagram node by node.
-2. Submit `clean_coffee` — watch it blip straight to `auto_approve`.
-3. Submit `borderline_wire` — watch triage fan out to all three specialists
-   simultaneously, fan into `aggregator`, then pause at `human_review`.
-   Switch to the Streamlit UI, show the rationale, click **Approve**, watch
-   `resolution` complete in Studio.
-4. Submit `borderline_restart_demo`, let it reach `human_review`, then kill
-   and restart `langgraph dev` (and/or the Streamlit process) — the pending
-   case is still there, checkpointed to `checkpoints.sqlite`. Approve it to
-   finish. Point out that `transaction_analyst`'s writeup flagged the
-   beneficiary via the `sanctions_check` tool — a new agent skill, added by
-   giving one specialist one more tool, no graph changes.
-5. Immediately resubmit `borderline_wire` (same account as step 4,
-   `acct_2002`) and open its investigation trace — the triage score is
-   visibly higher than the first time, because `triage` now remembers this
-   account escalated before. That's the `SqliteStore` long-term memory, not
-   the per-run checkpointer.
-6. Recap: one node = one responsibility, conditional edges = business logic,
-   the checkpointer buys per-run durability for free, the store buys
-   cross-run memory for free.
-
-Bonus MCP beat: point out that `identity_verifier`'s geolocation tool isn't
-canned — it's served by a real MCP server (`mcp_server/geolocation_server.py`)
-making a live HTTP call to ip-api.com. For `impossible_travel`, the resolved
-IP genuinely geolocates to Nigeria, which is what makes the agent's writeup
-convincing rather than scripted.
-
-See `docs/superpowers/specs/2026-07-11-langgraph-fraud-demo-design.md` for
-the full design and `docs/superpowers/plans/2026-07-11-langgraph-fraud-demo.md`
-for the (unused) task-by-task TDD plan this was built from directly instead.
-
 ## Project structure
 
 ```
-state.py                      # TransactionState TypedDict
 graph.py                      # StateGraph wiring: nodes, conditional edges, checkpointer
+cli.py                        # terminal companion to the Streamlit UI
 langgraph.json                # LangGraph Studio config
-agents/
-  ingest.py
-  triage.py                   # deterministic rules + auto_approve/auto_decline
-  specialist_factory.py       # shared lazy ReAct node builder
+core/                          # shared infra used across agents/nodes/ui - no graph nodes live here
+  state.py                     # TransactionState TypedDict
+  audit.py                     # audit-log entry builders (info/tool_call/summary/...)
+  specialist_factory.py        # shared lazy ReAct node builder for the 3 specialists
+agents/                        # LLM ReAct agents only (tool-using specialists)
   transaction_analyst.py
   identity_verifier.py         # uses the live MCP geolocation tool
   pattern_detector.py
+nodes/                         # deterministic / non-agent graph nodes
+  ingest.py
+  triage.py                   # deterministic rules + auto_approve/auto_decline
   aggregator.py                # structured-output fan-in node
   human_review.py              # interrupt_before target
   resolution.py
@@ -217,6 +243,7 @@ data/
 ui/
   logic.py                     # graph-driving functions (queue, resume)
   app.py                       # Streamlit rendering
+  diagrams.py                   # hand-built SVG flow/architecture diagrams
 mcp_server/
   geolocation_server.py         # FastMCP server calling ip-api.com for real geolocation
 ```

@@ -5,8 +5,8 @@ from langchain_core.messages import AIMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
-import audit
-from state import TransactionState
+from core import audit
+from core.state import TransactionState
 
 DEFAULT_MODEL = "gpt-4o-mini"
 

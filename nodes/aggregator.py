@@ -3,8 +3,8 @@ from typing import Literal
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-import audit
-from state import TransactionState
+from core import audit
+from core.state import TransactionState
 
 AGGREGATOR_THRESHOLD = 0.5
 DEFAULT_MODEL = "gpt-4o-mini"
