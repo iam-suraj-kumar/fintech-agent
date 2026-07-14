@@ -36,13 +36,44 @@ uv run langgraph dev
 Opens a local Studio UI rendering the `fraud_guard` graph. Requires
 `OPENAI_API_KEY` in `.env` to actually execute specialist/aggregator nodes.
 
-### 3. Run the review UI (Streamlit)
+`uv run langgraph dev --port <PORT>` starts a local API server and opens LangSmith's hosted
+Studio UI (`smith.langchain.com/studio`) in your browser, pointed at that
+local server — no LangSmith API key needed just to view/run the graph this
+way. A LangSmith API key is only required separately if you also want run
+traces (LLM calls, timings, inputs/outputs) to show up in the LangSmith
+dashboard. Pass `--port` if the default port 2024 is already taken.
+
+Studio loads `graph.py:studio_graph` rather than `graph.py:graph`
+(`langgraph.json`) — the LangGraph API server manages its own persistence
+and rejects a graph pre-compiled with a custom checkpointer/store, so
+`studio_graph` is built without one. It's otherwise identical wiring;
+Studio's own dev persistence lives in a local `.langgraph_api/` folder
+instead of `checkpoints.sqlite`/`account_memory.sqlite`.
+
+### 3. Enable LangSmith tracing (optional)
+
+Off by default. To see every run's LLM calls, timings, and inputs/outputs
+in the LangSmith dashboard (`smith.langchain.com`), grab a free API key from
+there and set in `.env`:
+
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_...
+LANGSMITH_PROJECT=fraud-guard
+```
+
+Picked up automatically via `load_dotenv()` in `graph.py` — no code changes,
+works for `langgraph dev`, the Streamlit UI, and `cli.py` alike. This is
+separate from Studio (step 2 above), which renders the graph regardless of
+whether tracing is on.
+
+### 4. Run the review UI (Streamlit)
 
 ```bash
 uv run streamlit run ui/app.py --server.port 8501
 ```
 
-### 4. Run the CLI
+### 5. Run the CLI
 
 A terminal companion to the Streamlit UI — same graph, same database files,
 safe to run alongside it since both talk to the same checkpointed state.
@@ -71,11 +102,12 @@ there in the terminal.
    Switch to the Streamlit UI, show the rationale, click **Approve**, watch
    `resolution` complete in Studio.
 4. Submit `borderline_restart_demo`, let it reach `human_review`, then kill
-   and restart `langgraph dev` (and/or the Streamlit process) — the pending
-   case is still there, checkpointed to `checkpoints.sqlite`. Approve it to
-   finish. Point out that `transaction_analyst`'s writeup flagged the
-   beneficiary via the `sanctions_check` tool — a new agent skill, added by
-   giving one specialist one more tool, no graph changes.
+   and restart the process — the pending case is still there. Studio persists
+   this to its own local `.langgraph_api/` cache; the Streamlit UI/CLI persist
+   to `checkpoints.sqlite` via our own `SqliteSaver` (see Studio note below).
+   Approve it to finish. Point out that `transaction_analyst`'s writeup
+   flagged the beneficiary via the `sanctions_check` tool — a new agent
+   skill, added by giving one specialist one more tool, no graph changes.
 5. Immediately resubmit `borderline_wire` (same account as step 4,
    `acct_2002`) and open its investigation trace — the triage score is
    visibly higher than the first time, because `triage` now remembers this

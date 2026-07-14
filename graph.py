@@ -112,3 +112,9 @@ store = SqliteStore(_memory_conn)
 store.setup()
 
 graph = build_graph(DEFAULT_NODES, checkpointer=checkpointer, store=store)
+
+# LangGraph API (`langgraph dev` / Studio) manages its own persistence and
+# refuses a graph pre-compiled with a custom checkpointer/store - langgraph.json
+# points Studio at this variant instead, while cli.py and the Streamlit UI keep
+# using `graph` above for our own SQLite-backed checkpointing/memory.
+studio_graph = build_graph(DEFAULT_NODES)

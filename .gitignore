@@ -7,3 +7,4 @@ checkpoints.sqlite*
 account_memory.sqlite*
 .pytest_cache/
 .chroma/
+.langgraph_api/
