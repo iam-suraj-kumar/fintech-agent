@@ -2,7 +2,7 @@
 name = "fraud-guard"
 version = "0.1.0"
 description = "LangGraph fintech fraud-detection demo"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<=3.13"
 dependencies = [
     "langgraph>=0.2.60",
     "langgraph-checkpoint-sqlite>=2.0.0",
