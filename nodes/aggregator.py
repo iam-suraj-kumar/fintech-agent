@@ -1,9 +1,9 @@
 from typing import Literal
 
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from core import audit
+from core.llm import get_llm
 from core.state import TransactionState
 
 AGGREGATOR_THRESHOLD = 0.5
@@ -16,7 +16,7 @@ class AggregatorOutput(BaseModel):
 
 
 def _build_llm(model: str = DEFAULT_MODEL):
-    return ChatOpenAI(model=model, temperature=0).with_structured_output(AggregatorOutput)
+    return get_llm(model, temperature=0).with_structured_output(AggregatorOutput)
 
 
 def aggregator_node(state: TransactionState) -> dict:

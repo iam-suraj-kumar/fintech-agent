@@ -155,9 +155,10 @@ def _get_store():
     global _store
     if _store is None:
         from langchain_chroma import Chroma
-        from langchain_openai import OpenAIEmbeddings
 
-        _store = Chroma.from_texts(FRAUD_CASE_TEXTS, OpenAIEmbeddings())
+        from core.embeddings import get_embeddings
+
+        _store = Chroma.from_texts(FRAUD_CASE_TEXTS, get_embeddings())
     return _store
 
 

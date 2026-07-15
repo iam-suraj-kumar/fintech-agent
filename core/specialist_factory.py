@@ -2,10 +2,10 @@ import json
 from typing import Callable
 
 from langchain_core.messages import AIMessage, ToolMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
 from core import audit
+from core.llm import get_llm
 from core.state import TransactionState
 
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -45,7 +45,7 @@ def make_specialist_node(
     def _get_agent():
         if "agent" not in agent_holder:
             resolved_tools = tools() if callable(tools) else tools
-            llm = ChatOpenAI(model=model, temperature=0)
+            llm = get_llm(model, temperature=0)
             agent_holder["agent"] = create_react_agent(llm, resolved_tools, prompt=system_prompt)
         return agent_holder["agent"]
 

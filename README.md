@@ -14,7 +14,7 @@ synthetic/mock so the rest of the demo runs offline and predictably.
 
 ```bash
 uv sync
-cp .env.example .env  # then fill in OPENAI_API_KEY
+cp .env.example .env  # then fill in PORTKEY_API_KEY
 ```
 
 `uv sync` creates `.venv` and installs everything from `uv.lock`. Prefix the
@@ -34,7 +34,8 @@ uv run langgraph dev
 ```
 
 Opens a local Studio UI rendering the `fraud_guard` graph. Requires
-`OPENAI_API_KEY` in `.env` to actually execute specialist/aggregator nodes.
+`PORTKEY_API_KEY` in `.env` to actually execute specialist/aggregator nodes
+(LLM calls are routed through the Portkey gateway — see `core/llm.py`).
 
 `uv run langgraph dev --port <PORT>` starts a local API server and opens LangSmith's hosted
 Studio UI (`smith.langchain.com/studio`) in your browser, pointed at that
