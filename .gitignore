@@ -14,3 +14,10 @@ account_memory.sqlite*
 .tokensave/tokensave.db
 .tokensave/tokensave.db-shm
 .tokensave/tokensave.db-wal
+
+# notebooks/ keep their own databases here
+.notebook_state/
+
+# slide build dependencies
+docs/slides_src/node_modules/
+docs/slides_src/base.pptx

@@ -8,21 +8,27 @@ survives a process restart mid-review thanks to checkpointing. The
 server hitting a live public IP-geolocation API — everything else stays
 synthetic/mock so the rest of the demo runs offline and predictably.
 
+It runs on **Google Gemini** by default (a free key from
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey)) or on
+**OpenAI**, chosen in `.env`. Five step-by-step [notebooks](#notebooks)
+teach it from scratch.
+
 ## Quickstart
 
 ### 1. Setup
 
 ```bash
-uv sync
-cp .env.example .env  # then fill in PORTKEY_API_KEY
+uv sync --dev
+cp .env.example .env  # then fill in GEMINI_API_KEY (or see "Choosing a model")
 ```
 
-`uv sync` creates `.venv` and installs everything from `uv.lock`. Prefix the
+`uv sync --dev` creates `.venv` and installs everything from `uv.lock`,
+including the dev tools (LangGraph Studio CLI, Jupyter, pytest). Prefix the
 run commands below with `uv run` (e.g. `uv run streamlit run ui/app.py ...`),
 or run `source .venv/bin/activate` once per shell instead.
 
-Set `RESET_MEMORY_ON_START=true` in `.env` before a rehearsal or the actual
-talk to wipe account memory on every app start — otherwise repeated testing
+`RESET_MEMORY_ON_START=true` (the default in `.env.example`) wipes account
+memory on every app start. Keep it on for rehearsals and the talk — otherwise repeated testing
 on the same account (`borderline_wire`/`borderline_restart_demo` both use
 `acct_2002`) accumulates enough escalation/decline history that triage
 starts auto-declining them outright instead of routing to investigation.
@@ -33,9 +39,9 @@ starts auto-declining them outright instead of routing to investigation.
 uv run langgraph dev
 ```
 
-Opens a local Studio UI rendering the `fraud_guard` graph. Requires
-`PORTKEY_API_KEY` in `.env` to actually execute specialist/aggregator nodes
-(LLM calls are routed through the Portkey gateway — see `core/llm.py`).
+Opens a local Studio UI rendering the `fraud_guard` graph. Running the
+specialist/aggregator nodes needs your model provider's key in `.env`
+(`GEMINI_API_KEY` by default — see [Choosing a model](#choosing-a-model)).
 
 `uv run langgraph dev --port <PORT>` starts a local API server and opens LangSmith's hosted
 Studio UI (`smith.langchain.com/studio`) in your browser, pointed at that
@@ -93,6 +99,55 @@ which deterministically synthesizes a plausible transaction (see "Any
 transaction ID, not just a fixed menu" under **How it works** below). If the
 transaction reaches `human_review`, `submit` prompts for a decision right
 there in the terminal.
+
+## Choosing a model
+
+All LLM and embedding calls go through `core/llm.py: get_llm()` and
+`core/embeddings.py: get_embeddings()`, which return LangChain models, so tool
+calling (`create_react_agent`) and structured output work the same with
+either provider. Settings in `.env`, read when a model is created:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `LLM_PROVIDER` | `gemini` | `gemini` or `openai` |
+| `GEMINI_API_KEY` | (none) | needed when a provider is `gemini` |
+| `OPENAI_API_KEY` | (none) | needed when a provider is `openai` |
+| `LLM_MODEL` | `gemini-3.5-flash` / `gpt-4o-mini` | override the chat model for all agents and the aggregator |
+| `EMBEDDING_PROVIDER` | same as `LLM_PROVIDER` | provider for the fraud-case search embeddings |
+| `EMBEDDING_MODEL` | `models/gemini-embedding-001` / `text-embedding-3-small` | override the embedding model |
+
+- Gemini runs with thinking off (short tool calls) and every call retries
+  rate-limit errors with backoff, since the free tier allows only a few
+  requests per minute and the three specialists run in parallel.
+- Embeddings only feed an in-memory Chroma store rebuilt each run
+  (`tools/mock_apis.py`), so switching provider needs no re-indexing.
+- Gemini model names change often; on a `404 NOT_FOUND` or `503 UNAVAILABLE`
+  set `LLM_MODEL` to another model listed in AI Studio.
+
+## Notebooks
+
+`notebooks/` teaches the project from scratch using its real code. Each
+notebook opens with what you'll learn, time and cost, a flow diagram and a
+table of its Parts, explains every step, and ends with things to try.
+
+```bash
+uv run jupyter lab notebooks/
+```
+
+| Notebook | What you'll learn | API key? |
+|---|---|---|
+| `00_start_here.ipynb` | The problem, tiered escalation, and every LangGraph building block on toy graphs: state, nodes, edges, conditional routing, parallel branches and reducers, interrupts + checkpoints, the store | no |
+| `01_triage_rules.ipynb` | The scenarios and synthetic transactions, the mock lookups, triage scoring signal by signal, thresholds and routing, the account-memory penalty, and how much of 500 random transactions reaches the LLM | no |
+| `02_specialist_agents.ipynb` | Tools, the fraud-case RAG search, the live MCP geolocation server, a ReAct agent step by step, all three specialists, the structured-output aggregator | yes |
+| `03_full_graph.ipynb` | `build_graph()`, the drawn graph, the auto paths, the parallel investigation paused before `human_review`, resuming with a decision, the audit trail, any transaction ID | yes |
+| `04_persistence_and_memory.ipynb` | A paused review surviving a rebuilt graph, the review queue and checkpoint history, long-term memory changing the next triage, Studio / app / CLI | yes |
+
+- **Each notebook runs on its own** and uses its own database files in
+  `.notebook_state/` (git-ignored), never the app's `checkpoints.sqlite` /
+  `account_memory.sqlite`.
+- Diagrams are Mermaid blocks, drawn by JupyterLab 4.1+ (installed by `--dev`).
+- The notebooks are generated by `scripts/make_notebooks.py`; edit that file,
+  then `uv run python scripts/make_notebooks.py notebooks` (this clears saved outputs).
 
 ## Demo script
 
@@ -183,8 +238,8 @@ Each box is one LangGraph node with one job:
 | Node | Problem it solves | What it does |
 |---|---|---|
 | **`ingest`** | Every run needs a consistent starting point | Records the transaction into state and starts the audit trail |
-| **`triage`** (`nodes/triage.py`) | Don't spend LLM calls on the 95% of transactions that are obvious | Plain Python scoring against account history, device, merchant risk, and geo signals — no LLM. Routes to `auto_approve` (score < 0.30), `auto_decline` (score ≥ 0.65), or `investigate` (in between) |
-| **`transaction_analyst`** | Is this amount/merchant actually unusual for *this* account, not just in the abstract? | ReAct agent with `account_history` + `merchant_risk_score` tools |
+| **`triage`** (`nodes/triage.py`) | Don't spend LLM calls on the transactions that are obvious (in a run of 500 random synthetic transactions, 91% were settled here) | Plain Python scoring against account history, device, merchant risk, and geo signals — no LLM. Routes to `auto_approve` (score < 0.30), `auto_decline` (score ≥ 0.65), or `investigate` (in between) |
+| **`transaction_analyst`** | Is this amount/merchant actually unusual for *this* account, not just in the abstract? | ReAct agent with `account_history` + `merchant_risk_score` + `sanctions_check` tools |
 | **`identity_verifier`** | Is the device and location consistent with the real account owner? | ReAct agent with `device_fingerprint` + a **live** `geolocation` tool — the only part of the demo that hits a real external API (see MCP section below) |
 | **`pattern_detector`** | Does this resemble fraud patterns seen before, not just this account's own history? | ReAct agent with `account_history` + a RAG tool (`similar_fraud_cases`) searching a small Chroma store of past confirmed fraud cases |
 | **`aggregator`** | Three independent opinions need to become *one* decision with a coherent explanation | LLM call with structured output (`AggregatorOutput`) combining all three findings into a `composite_score` + plain-English rationale. Routes to `human_review` (score ≥ 0.5) or straight to `resolution` |
@@ -254,6 +309,8 @@ graph.py                      # StateGraph wiring: nodes, conditional edges, che
 cli.py                        # terminal companion to the Streamlit UI
 langgraph.json                # LangGraph Studio config
 core/                          # shared infra used across agents/nodes/ui - no graph nodes live here
+  llm.py                       # get_llm(): Gemini or OpenAI chat model (LLM_PROVIDER)
+  embeddings.py                # get_embeddings(): Gemini or OpenAI embeddings
   state.py                     # TransactionState TypedDict
   audit.py                     # audit-log entry builders (info/tool_call/summary/...)
   specialist_factory.py        # shared lazy ReAct node builder for the 3 specialists
@@ -279,4 +336,17 @@ ui/
   diagrams.py                   # hand-built SVG flow/architecture diagrams
 mcp_server/
   geolocation_server.py         # FastMCP server calling ip-api.com for real geolocation
+notebooks/                     # 00_start_here … 04_persistence_and_memory (see "Notebooks")
+scripts/
+  make_notebooks.py            # generates notebooks/
+tests/                         # pytest: provider selection (no API key needed)
+docs/                          # talk materials (slides)
 ```
+
+## Tests
+
+```bash
+uv run pytest
+```
+
+No API key needed: the tests check provider selection without calling a model.

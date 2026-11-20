@@ -1,0 +1,6 @@
+{
+  "name": "fraud-guard-slides",
+  "private": true,
+  "description": "Builds docs/Fraud_Guard_talk.pptx: node build_deck.js && python add_animations.py",
+  "dependencies": { "pptxgenjs": "3.12.0" }
+}

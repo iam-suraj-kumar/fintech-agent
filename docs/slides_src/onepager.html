@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fraud Guard</title>
+<!-- Print to docs/Fraud_Guard_onepager.pdf with headless Chrome:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer \
+       --virtual-time-budget=8000 --print-to-pdf=../Fraud_Guard_onepager.pdf onepager.html -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --navy: #15202E; --paper: #F6F5F1; --ink: #15202E; --muted: #4A5568; --line: #D9DDE3;
+  --blue: #2459C2; --blue-soft: #8FB4FF; --orange: #C2560F; --orange-soft: #F2B27A;
+  --green: #2F7A4A; --sans: "IBM Plex Sans", Arial, sans-serif; --mono: "JetBrains Mono", "Courier New", monospace;
+}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 210mm; height: 297mm; overflow: hidden; }
+body { font-family: var(--sans); color: var(--ink); background: var(--paper);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex; flex-direction: column; }
+
+.hero { background: var(--navy); color: var(--paper); padding: 22mm 18mm 16mm; display: flex; flex-direction: column; gap: 5mm; }
+.eyebrow { font-family: var(--mono); font-size: 9pt; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue-soft); }
+h1 { font-size: 40pt; line-height: 1.02; font-weight: 700; letter-spacing: -0.01em; }
+h1 span { color: var(--orange-soft); }
+.hero p { font-size: 13pt; line-height: 1.45; color: #BFC8D6; max-width: 155mm; }
+
+main { flex: 1; padding: 12mm 18mm 0; display: flex; flex-direction: column; gap: 11mm; }
+h2 { font-size: 9pt; font-family: var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 4mm; }
+
+.problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+.problem { border-top: 2.5pt solid var(--orange); padding-top: 3mm; display: flex; flex-direction: column; gap: 1.5mm; }
+.problem b { font-size: 19pt; line-height: 1.05; font-weight: 700; }
+.problem p { font-size: 10pt; line-height: 1.4; color: var(--muted); }
+
+.fix { display: flex; align-items: center; gap: 2.2mm; white-space: nowrap; }
+.pill { font-size: 10pt; font-weight: 600; padding: 2.4mm 4.2mm; border-radius: 99px; background: #E3EBFA; color: var(--blue); }
+.pill.person { background: #FBE9DC; color: var(--orange); }
+.pill.end { background: var(--blue); color: #fff; }
+.arrow { color: var(--muted); font-size: 13pt; }
+.stat { margin-top: 4mm; font-size: 10.5pt; color: var(--muted); }
+.stat b { color: var(--ink); }
+
+.prereqs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.req { background: #FDFDFB; border: 1px solid var(--line); border-radius: 3mm; padding: 4mm 4.5mm; display: flex; flex-direction: column; gap: 1mm; }
+.req b { font-size: 13pt; font-weight: 600; }
+.req p { font-size: 9.5pt; color: var(--muted); }
+.req.optional { background: transparent; border-style: dashed; border-color: #AEB6C2; }
+.req.optional b { color: var(--muted); }
+
+footer { margin: auto 18mm 12mm; padding-top: 4mm; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 9pt; color: var(--muted); }
+footer .mono { font-family: var(--mono); color: var(--ink); }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <p class="eyebrow">Build it yourself · LangGraph workshop</p>
+    <h1>Catch fraud.<br><span>Spend AI wisely.</span></h1>
+    <p>Build a fraud-detection pipeline where rules handle the obvious, three AI agents investigate the ambiguous, and a person makes the risky calls.</p>
+  </section>
+
+  <main>
+    <section>
+      <h2>The problem</h2>
+      <div class="problems">
+        <div class="problem"><b>Rigid rules</b><p>miss new kinds of fraud and block honest customers.</p></div>
+        <div class="problem"><b>AI on everything</b><p>several LLM calls per payment, mostly on obvious ones. Slow and expensive.</p></div>
+        <div class="problem"><b>No human check</b><p>Nobody wants an AI alone freezing an $18,000 wire.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>The fix</h2>
+      <div class="fix">
+        <span class="pill">Rules triage</span><span class="arrow">→</span>
+        <span class="pill">3 AI agents</span><span class="arrow">→</span>
+        <span class="pill person">A person decides</span><span class="arrow">→</span>
+        <span class="pill end">Remembered</span>
+      </div>
+      <p class="stat">In a run of 500 transactions, <b>only 9% needed the AI agents</b>; rules settled the rest instantly.</p>
+    </section>
+
+    <section>
+      <h2>Bring to the session</h2>
+      <div class="prereqs">
+        <div class="req"><b>A laptop</b><p>macOS, Linux or Windows</p></div>
+        <div class="req"><b>Python 3.11–3.13</b><p>python.org</p></div>
+        <div class="req"><b>uv</b><p>Python package manager</p></div>
+        <div class="req"><b>Git</b><p>to get the code</p></div>
+        <div class="req"><b>A Gemini API key</b><p>free from Google AI Studio</p></div>
+        <div class="req optional"><b>OpenAI key</b><p>optional, instead of Gemini</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span class="mono">github.com/iam-suraj-kumar/fintech-agent</span>
+    <span>Setup guide: README in the repo</span>
+  </footer>
+</body>
+</html>
