@@ -8,9 +8,6 @@ from core import audit
 from core.llm import get_llm
 from core.state import TransactionState
 
-DEFAULT_MODEL = "gpt-4o-mini"
-
-
 def _parse_tool_content(content):
     if not isinstance(content, str):
         return content
@@ -38,14 +35,13 @@ def make_specialist_node(
     state_key: str,
     tools: list | Callable[[], list],
     system_prompt: str,
-    model: str = DEFAULT_MODEL,
 ) -> Callable[[TransactionState], dict]:
     agent_holder: dict = {}
 
     def _get_agent():
         if "agent" not in agent_holder:
             resolved_tools = tools() if callable(tools) else tools
-            llm = get_llm(model, temperature=0)
+            llm = get_llm(temperature=0)
             agent_holder["agent"] = create_react_agent(llm, resolved_tools, prompt=system_prompt)
         return agent_holder["agent"]
 

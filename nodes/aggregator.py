@@ -7,7 +7,6 @@ from core.llm import get_llm
 from core.state import TransactionState
 
 AGGREGATOR_THRESHOLD = 0.5
-DEFAULT_MODEL = "gpt-4o-mini"
 
 
 class AggregatorOutput(BaseModel):
@@ -15,8 +14,8 @@ class AggregatorOutput(BaseModel):
     reasoning: str = Field(description="2-4 sentence plain-English explanation combining all specialist findings")
 
 
-def _build_llm(model: str = DEFAULT_MODEL):
-    return get_llm(model, temperature=0).with_structured_output(AggregatorOutput)
+def _build_llm():
+    return get_llm(temperature=0).with_structured_output(AggregatorOutput)
 
 
 def aggregator_node(state: TransactionState) -> dict:
