@@ -27,6 +27,39 @@ including the dev tools (LangGraph Studio CLI, Jupyter, pytest). Prefix the
 run commands below with `uv run` (e.g. `uv run streamlit run ui/app.py ...`),
 or run `source .venv/bin/activate` once per shell instead.
 
+#### Without uv (pip or Google Colab)
+
+`requirements.txt` (the app) and `requirements-dev.txt` (adds Jupyter,
+matplotlib, pytest and the Studio CLI) are pinned from `uv.lock`, so pip
+installs the same versions as `uv sync`. Use Python 3.11–3.13.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cp .env.example .env               # then fill in GEMINI_API_KEY
+```
+
+Then run the commands below without the `uv run` prefix (e.g.
+`jupyter lab notebooks/`, `python cli.py submit clean_coffee`).
+
+In **Google Colab**, run this in the first cell of a notebook, then run the
+notebook as usual (its setup cell finds the repo from the working directory):
+
+```python
+!git clone -b develop-gemini https://github.com/iam-suraj-kumar/fintech-agent.git
+%cd fintech-agent
+!pip install -q -r requirements.txt
+
+import os
+from google.colab import userdata          # add GEMINI_API_KEY under Colab's "Secrets" (key icon)
+os.environ["GEMINI_API_KEY"] = userdata.get("GEMINI_API_KEY")
+```
+
+Notebooks 00 and 01 need no key. If Colab asks to restart the runtime after
+the install, restart, then run `%cd fintech-agent` and continue. The notebooks'
+Mermaid diagrams render in JupyterLab; other viewers may show them as text.
+
 `RESET_MEMORY_ON_START=true` (the default in `.env.example`) wipes account
 memory on every app start. Keep it on for rehearsals and the talk — otherwise repeated testing
 on the same account (`borderline_wire`/`borderline_restart_demo` both use
@@ -337,6 +370,7 @@ ui/
 mcp_server/
   geolocation_server.py         # FastMCP server calling ip-api.com for real geolocation
 notebooks/                     # 00_start_here … 04_persistence_and_memory (see "Notebooks")
+requirements.txt               # pinned from uv.lock, for pip / Colab (requirements-dev.txt adds Jupyter etc.)
 scripts/
   make_notebooks.py            # generates notebooks/
 tests/                         # pytest: provider selection (no API key needed)
