@@ -160,12 +160,21 @@ A LangGraph app is a **graph**:
 from typing import TypedDict
 
 from IPython.display import Markdown
+from langchain_core.runnables.graph import NodeStyles
 from langgraph.graph import END, START, StateGraph
+
+# Explicit colours so the boxes read on both light and dark themes
+# (LangGraph's default fills are pale but leave the text colour to the theme).
+GRAPH_STYLES = NodeStyles(
+    default="fill:#DCE6FA,stroke:#2459C2,stroke-width:1px,color:#15202E,line-height:1.2",
+    first="fill:#2459C2,stroke:#2459C2,color:#FFFFFF",
+    last="fill:#2F7A4A,stroke:#2F7A4A,color:#FFFFFF",
+)
 
 
 def show(app):
     """Draw a compiled graph (JupyterLab renders the Mermaid diagram)."""
-    return Markdown("```mermaid\\n" + app.get_graph().draw_mermaid() + "\\n```")
+    return Markdown("```mermaid\\n" + app.get_graph().draw_mermaid(node_colors=GRAPH_STYLES) + "\\n```")
 
 
 class ToyState(TypedDict):
@@ -792,7 +801,18 @@ print(inspect.getsource(build_graph))
 LangGraph can draw the compiled graph itself. Dotted arrows are conditional edges; `human_review` is marked as an interrupt.
 '''),
     code('''
-Markdown("```mermaid\\n" + graph.get_graph().draw_mermaid() + "\\n```")
+from langchain_core.runnables.graph import NodeStyles
+
+# Explicit colours so the boxes read on both light and dark themes
+# (LangGraph's default fills are pale but leave the text colour to the theme).
+GRAPH_STYLES = NodeStyles(
+    default="fill:#DCE6FA,stroke:#2459C2,stroke-width:1px,color:#15202E,line-height:1.2",
+    first="fill:#2459C2,stroke:#2459C2,color:#FFFFFF",
+    last="fill:#2F7A4A,stroke:#2F7A4A,color:#FFFFFF",
+)
+
+
+Markdown("```mermaid\\n" + graph.get_graph().draw_mermaid(node_colors=GRAPH_STYLES) + "\\n```")
 '''),
     md('''
 ---
