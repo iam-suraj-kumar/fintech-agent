@@ -25,8 +25,10 @@ def _format_trace(name: str, messages: list) -> list[dict]:
                 entries.append(audit.tool_call(name, call["name"], call["args"]))
         elif isinstance(message, ToolMessage):
             entries.append(audit.tool_result(name, message.name, _parse_tool_content(message.content)))
-        elif isinstance(message, AIMessage) and message.content:
-            entries.append(audit.summary(name, message.content))
+        elif isinstance(message, AIMessage) and message.text:
+            # .text, not .content: Gemini returns content as a list of blocks,
+            # OpenAI as a string; .text is a plain string for both.
+            entries.append(audit.summary(name, str(message.text)))
     return entries
 
 
@@ -52,7 +54,7 @@ def make_specialist_node(
             {"messages": [("user", f"Investigate this transaction: {transaction}")]}
         )
         messages = result["messages"]
-        finding = messages[-1].content
+        finding = str(messages[-1].text)
         return {
             state_key: finding,
             "audit_log": _format_trace(name, messages),

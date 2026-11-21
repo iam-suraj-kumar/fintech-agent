@@ -41,6 +41,19 @@ load_dotenv(ROOT / ".env")  # never overrides the two database paths set above
 
 import pandas as pd
 
+pd.set_option("display.max_colwidth", None)  # show agent findings in full, not cut off with "..."
+
+
+def trace_table(audit_log: list[dict]) -> pd.DataFrame:
+    """One readable line per audit entry (entries have different fields, so a raw table is mostly blanks)."""
+    def detail(e: dict) -> str:
+        if e["kind"] == "tool_call":
+            return f"calls {{e['tool']}}({{e['args']}})"
+        if e["kind"] == "tool_result":
+            return f"{{e['tool']}} returned {{e['result']}}"
+        return str(e.get("text", ""))
+    return pd.DataFrame([{{"node": e.get("node", ""), "kind": e["kind"], "detail": detail(e)}} for e in audit_log])
+
 import core.audit  # noqa: F401  (creates the "fraud_guard" live logger)
 from core.llm import llm_model, llm_provider
 
@@ -384,7 +397,7 @@ Four hand-made scenarios drive the demo. Each is a plain dictionary: who paid (`
     code('''
 from data.synthetic_transactions import SCENARIOS, get_scenario
 
-pd.DataFrame(SCENARIOS).T[["transaction_id", "account_id", "amount", "merchant_id", "device_id", "ip", "type", "beneficiary_name"]]
+pd.DataFrame(SCENARIOS).T[["transaction_id", "account_id", "amount", "merchant_id", "device_id", "ip", "type", "beneficiary_name"]].fillna("")  # only wires have a beneficiary
 '''),
     md('''
 Any other ID also works: `get_scenario()` hashes it into a seeded random generator, so the same ID always produces the same plausible transaction (about 1 in 7 lean risky). That is how an audience member can shout out any ID during a demo.
@@ -680,8 +693,7 @@ from core.state import new_state
 print("SYSTEM PROMPT:", SYSTEM_PROMPT, "\\n")
 update = transaction_analyst_node(new_state(SCENARIOS["borderline_restart_demo"]))
 
-trace = pd.DataFrame(update["audit_log"])
-display(trace[[c for c in ("kind", "tool", "args", "result", "text") if c in trace]])
+display(trace_table(update["audit_log"]))
 print("FINDING:", update["analyst_findings"])
 '''),
     md('''
@@ -782,10 +794,7 @@ def new_thread(name: str) -> dict:
 
 
 def audit_table(values: dict) -> pd.DataFrame:
-    log = pd.DataFrame(values["audit_log"])
-    log["detail"] = log.apply(lambda r: r.get("text") if isinstance(r.get("text"), str)
-                              else f"{r.get('tool')}({r.get('args') or ''}) {r.get('result') or ''}", axis=1)
-    return log[["node", "kind", "detail"]]'''),
+    return trace_table(values["audit_log"])'''),
     md('''
 ---
 ## Part 2 · The wiring
