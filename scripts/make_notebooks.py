@@ -5,8 +5,13 @@
 Overwrites the notebooks and clears their outputs. Edit this file, not the .ipynb files.
 """
 import base64
+import hashlib
+import os
 import re
+import shlex
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import nbformat as nbf
@@ -76,7 +81,8 @@ def trace_table(audit_log: list[dict]) -> pd.DataFrame:
         return str(e.get("text", ""))
     return pd.DataFrame([{{"node": e.get("node", ""), "kind": e["kind"], "detail": detail(e)}} for e in audit_log])
 
-from IPython.display import Image, Markdown
+from html import escape
+
 from langchain_core.runnables.graph import NodeStyles
 
 # Explicit colours so the boxes read on both light and dark themes
@@ -88,13 +94,31 @@ GRAPH_STYLES = NodeStyles(
 )
 
 
+class _MermaidGraph:
+    """Displays Mermaid code as a diagram. JupyterLab and VS Code draw Mermaid themselves;
+    Colab doesn't, so there the browser draws it with Mermaid's JavaScript."""
+
+    def __init__(self, source: str):
+        self.source = source
+
+    def _repr_mimebundle_(self, include=None, exclude=None):
+        html = (
+            '<div style="background:#fff;padding:10px;border-radius:6px;display:inline-block">'
+            '<pre class="mermaid">' + escape(self.source) + "</pre></div>"
+            '<script type="module">'
+            'import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";'
+            'mermaid.initialize({{startOnLoad: false, theme: "default"}});'
+            'await mermaid.run({{querySelector: "pre.mermaid:not([data-processed])"}});'
+            "</script>"
+        )
+        if "google.colab" in sys.modules:
+            return {{"text/html": html}}
+        return {{"text/markdown": "```mermaid\\n" + self.source + "\\n```"}}
+
+
 def show_graph(app):
-    """Draw a compiled graph as an image. Rendered by mermaid.ink, so it shows in Colab,
-    VS Code and JupyterLab alike; offline it falls back to Mermaid text (JupyterLab renders that)."""
-    try:
-        return Image(app.get_graph().draw_mermaid_png(node_colors=GRAPH_STYLES, background_color="white"))
-    except Exception:
-        return Markdown("```mermaid\\n" + app.get_graph().draw_mermaid(node_colors=GRAPH_STYLES) + "\\n```")
+    """Draw a compiled LangGraph graph."""
+    return _MermaidGraph(app.get_graph().draw_mermaid(node_colors=GRAPH_STYLES))
 
 import core.audit  # noqa: F401  (creates the "fraud_guard" live logger)
 from core.llm import llm_model, llm_provider
@@ -112,17 +136,46 @@ The next cell connects the notebook to the project. It gives this notebook **its
 
 
 _MERMAID_BLOCK = re.compile(r"```mermaid\n(.*?)```", re.S)
+DIAGRAMS = Path(__file__).resolve().parent.parent / "notebooks" / "diagrams"
+_used_diagrams: set[str] = set()
 
 
-def _mermaid_image(match: re.Match) -> str:
-    # Colab and GitHub don't render Mermaid in Markdown, so every diagram is an image
-    # drawn by mermaid.ink from the code in its URL (white background: readable in dark mode).
-    encoded = base64.urlsafe_b64encode(match.group(1).encode()).decode()
-    return f"![diagram](https://mermaid.ink/svg/{encoded}?bgColor=FFFFFF)"
+def _diagram_png(source: str) -> tuple[str, bytes]:
+    """PNG for a Mermaid diagram, cached in notebooks/diagrams/ by content hash.
+
+    Only a new or changed diagram needs rendering, which takes mermaid-cli: set MMDC to its
+    command, e.g. MMDC="mmdc -p puppeteer.json" (see docs/slides_src or mermaid-cli's README).
+    """
+    name = hashlib.sha1(source.encode()).hexdigest()[:12] + ".png"
+    path = DIAGRAMS / name
+    _used_diagrams.add(name)
+    if not path.exists():
+        if not os.environ.get("MMDC"):
+            sys.exit(f"Diagram {name} is new or changed; set MMDC to a mermaid-cli command to render it.")
+        DIAGRAMS.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "diagram.mmd"
+            src.write_text(source)
+            subprocess.run([*shlex.split(os.environ["MMDC"]), "-i", str(src), "-o", str(path),
+                            "-b", "white", "-s", "2", "-q"], check=True)
+    return name, path.read_bytes()
 
 
 def md(text):
-    return nbf.v4.new_markdown_cell(_MERMAID_BLOCK.sub(_mermaid_image, text.strip()))
+    # Diagrams are embedded as PNG attachments, not Mermaid: Colab and GitHub don't render
+    # Mermaid in Markdown, and an attachment shows everywhere with no internet connection.
+    attachments = {}
+
+    def to_image(match: re.Match) -> str:
+        name, png = _diagram_png(match.group(1))
+        attachments[name] = {"image/png": base64.b64encode(png).decode()}
+        return f"![diagram](attachment:{name})"
+
+    source = _MERMAID_BLOCK.sub(to_image, text.strip())
+    cell = nbf.v4.new_markdown_cell(source)
+    if attachments:
+        cell["attachments"] = attachments
+    return cell
 
 
 def code(text):
@@ -1081,3 +1134,8 @@ The same graph, three other ways in:
 - Open Studio (`uv run langgraph dev`) and run `borderline_wire` there.
 '''),
 ])
+
+# Remove cached diagram images that no notebook uses any more.
+for stale in DIAGRAMS.glob("*.png"):
+    if stale.name not in _used_diagrams:
+        stale.unlink()
