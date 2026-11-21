@@ -1021,7 +1021,10 @@ The checkpointer remembered **one run**. The store remembers **the account** acr
     code('''
 account = SCENARIOS["borderline_wire"]["account_id"]
 store = SqliteStore(sqlite3.connect(MEMORY, check_same_thread=False, isolation_level=None))
-print(account, "memory:", [item.value for item in store.search(("account_memory", account))])
+memory = [item.value for item in store.search(("account_memory", account))]
+print(account, "memory:", memory)
+if not memory:
+    print("(empty: run the escalate cell above first, or the wire is investigated as if new)")
 
 wire = fresh_graph.invoke(new_state(SCENARIOS["borderline_wire"]), {"configurable": {"thread_id": f"wire-{uuid.uuid4().hex[:6]}"}})
 print(f"\\nborderline_wire triage score now {wire['triage_score']:.2f} (0.64 on a clean account) -> {wire['triage_decision']} -> {wire['final_decision']}")
