@@ -13,6 +13,45 @@ It runs on **Google Gemini** by default (a free key from
 **OpenAI**, chosen in `.env`. Five step-by-step [notebooks](#notebooks)
 teach it from scratch.
 
+## Run it in Google Colab (no install)
+
+The fastest way to try it: everything runs in your browser, nothing to
+install on your laptop.
+
+1. **Get a free Gemini API key** at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+   (Get API key → Create API key). Notebooks 00 and 01 work without one.
+2. **Open a notebook** with its button below (start with 00, go in order).
+3. **Add your key to Colab** once: click the **key icon** (Secrets) in the left
+   sidebar → **Add new secret** → name `GEMINI_API_KEY`, paste your key as the
+   value, and switch on **Notebook access**.
+4. **Run it**: **Runtime → Run all** (click **Run anyway** if Colab warns the
+   notebook isn't from Google).
+
+| Notebook | Open | What it covers | Needs a key |
+|---|---|---|---|
+| 00_start_here | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/00_start_here.ipynb) | the problem, the data and LangGraph basics | no |
+| 01_triage_rules | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/01_triage_rules.ipynb) | rules triage: settling most payments with no AI | no |
+| 02_specialist_agents | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/02_specialist_agents.ipynb) | tools, RAG, MCP and the three ReAct agents | yes |
+| 03_full_graph | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/03_full_graph.ipynb) | the whole graph, pausing for human review | yes |
+| 04_persistence_and_memory | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/04_persistence_and_memory.ipynb) | surviving a restart, remembering accounts | yes |
+
+**What to expect**
+- The first cell sets everything up by itself, taking about a minute the first
+  time: it clones this repo (the notebooks import its code from `core/`,
+  `agents/` and `tools/`), installs `requirements.txt`, and reads your key.
+- If Colab asks to **restart the session**, or a later cell fails to import:
+  **Runtime → Restart session**, then **Run all** again (setup is skipped the
+  second time).
+- **Free-tier limit:** a free key allows about 20 Gemini requests per model per
+  day, and notebooks 02–04 use about 10 each. A `429 RESOURCE_EXHAUSTED`
+  error means you hit it: wait until tomorrow, enable billing in AI Studio,
+  or set `os.environ["LLM_MODEL"]` to another Gemini model in the first cell.
+- Run cells **in order**; each notebook is its own Colab session. Anything the
+  notebooks save (paused reviews, account memory) is gone when the session ends.
+
+To run it on your own machine instead, with the Streamlit app, the CLI and
+LangGraph Studio, follow the [Quickstart](#quickstart).
+
 ## Quickstart
 
 ### 1. Setup
@@ -27,7 +66,7 @@ including the dev tools (LangGraph Studio CLI, Jupyter, pytest). Prefix the
 run commands below with `uv run` (e.g. `uv run streamlit run ui/app.py ...`),
 or run `source .venv/bin/activate` once per shell instead.
 
-#### Without uv (pip or Google Colab)
+#### Without uv (pip)
 
 `requirements.txt` (the app) and `requirements-dev.txt` (adds Jupyter,
 matplotlib, pytest and the Studio CLI) are pinned from `uv.lock`, so pip
@@ -43,32 +82,8 @@ cp .env.example .env               # then fill in GEMINI_API_KEY
 Then run the commands below without the `uv run` prefix (e.g.
 `jupyter lab notebooks/`, `python cli.py submit clean_coffee`).
 
-#### Google Colab (no install)
-
-Nothing to set up on your laptop. Each notebook's first cell detects Colab and
-does the setup itself: it clones this repo (the notebooks import its code from
-`core/`, `agents/` and `tools/`), installs `requirements.txt`, and reads your
-key from Colab's Secrets.
-
-1. In Colab, click the **key icon** (Secrets) in the left sidebar, add
-   `GEMINI_API_KEY` with your key, and turn on **Notebook access**.
-2. Open a notebook below and choose **Runtime → Run all**.
-
-| Notebook | What it covers | Needs a key |
-|---|---|---|
-| [00_start_here](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/00_start_here.ipynb) | the domain and LangGraph basics | no |
-| [01_triage_rules](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/01_triage_rules.ipynb) | rules triage, no AI | no |
-| [02_specialist_agents](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/02_specialist_agents.ipynb) | tools, RAG, MCP and the ReAct agents | yes |
-| [03_full_graph](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/03_full_graph.ipynb) | the whole graph and human review | yes |
-| [04_persistence_and_memory](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/04_persistence_and_memory.ipynb) | pausing, restarting and memory | yes |
-
-The first run takes about a minute (the clone and install). If Colab asks to
-restart the session, or a later cell fails to import, use **Runtime → Restart
-session** and run all again: the second time it skips the setup. Each notebook
-is its own Colab session, so each one does this once. Files the notebooks save
-(paused reviews, account memory) disappear when Colab recycles the session.
-Diagrams are images drawn by mermaid.ink, so they show in Colab, VS Code, JupyterLab
-and on GitHub (they need an internet connection).
+For **Google Colab** (nothing to install), see
+[Run it in Google Colab](#run-it-in-google-colab-no-install) at the top.
 
 `RESET_MEMORY_ON_START=true` (the default in `.env.example`) wipes account
 memory on every app start. Keep it on for rehearsals and the talk — otherwise repeated testing
@@ -176,6 +191,9 @@ table of its Parts, explains every step, and ends with things to try.
 ```bash
 uv run jupyter lab notebooks/
 ```
+
+Or open them in Colab with no install: see
+[Run it in Google Colab](#run-it-in-google-colab-no-install).
 
 | Notebook | What you'll learn | API key? |
 |---|---|---|
