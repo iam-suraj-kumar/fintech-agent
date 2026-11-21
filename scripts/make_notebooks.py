@@ -302,6 +302,7 @@ print("paused before:", review_app.get_state(config).next)
 
 review_app.update_state(config, {"human_decision": "approve"})  # the reviewer clicks Approve
 print("after resume:", review_app.invoke(None, config)["final"])
+show(review_app)
 '''),
     md('''
 ### 4.5 Memory across runs: the store
