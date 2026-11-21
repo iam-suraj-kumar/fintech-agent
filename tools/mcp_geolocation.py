@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 import os
 import sys
@@ -28,7 +29,30 @@ def _run_sync(coro):
         return pool.submit(asyncio.run, coro).result()
 
 
+def _ensure_server_stderr_has_fileno() -> None:
+    """Make sure the MCP server subprocess gets a stderr it can use.
+
+    The MCP client passes the server the sys.stderr that existed when `mcp` was imported.
+    In Google Colab that is a notebook stream with no file descriptor, so starting the
+    server fails with "UnsupportedOperation: fileno". Use the process's real stderr then.
+    """
+    import mcp.client.stdio as stdio
+
+    start_server = stdio.stdio_client.__wrapped__
+    (errlog,) = start_server.__defaults__
+    try:
+        errlog.fileno()
+    except (AttributeError, OSError, ValueError):  # io.UnsupportedOperation is both
+        real = sys.__stderr__
+        try:
+            real.fileno()
+        except (AttributeError, OSError, ValueError):
+            real = open(os.devnull, "w")
+        start_server.__defaults__ = (real,)
+
+
 async def _load_mcp_tools():
+    _ensure_server_stderr_has_fileno()
     client = MultiServerMCPClient(
         {
             "geolocation": {
