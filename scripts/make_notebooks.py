@@ -22,8 +22,12 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 def setup(nb_id: str) -> str:
     return f'''# ── Settings ────────────────────────────────────────────────────────────
-SHOW_LIVE_LOGS = False  # True = print every node's live log line, like the terminal does
-LLM_MODEL = ""  # "" = default (gemini-3.5-flash). Busy (503) or out of quota (429)? Try e.g. "gemini-3.8-flash"
+# In Colab these two show as a checkbox and a dropdown (you can also type a model name).
+SHOW_LIVE_LOGS = False  # @param {{type: "boolean"}}
+LLM_MODEL = "gemini-3.5-flash"  # @param ["gemini-3.5-flash", "gemini-3.8-flash"] {{allow-input: true}}
+# SHOW_LIVE_LOGS: print every node's live log line, like the terminal does.
+# LLM_MODEL: model busy (503) or out of free quota (429)? Pick the other one, then
+# Runtime > Restart session > Run all. Ignored when LLM_PROVIDER=openai.
 
 # Setup: run from the repo root, and give this notebook its own database files in
 # .notebook_state/ so it never touches the app's checkpoints.sqlite / account_memory.sqlite.
@@ -72,8 +76,8 @@ warnings.filterwarnings("ignore")
 from dotenv import load_dotenv
 
 load_dotenv(ROOT / ".env")  # never overrides the two database paths set above
-if LLM_MODEL:
-    os.environ["LLM_MODEL"] = LLM_MODEL  # the setting above wins over .env
+if LLM_MODEL and (os.environ.get("LLM_PROVIDER") or "gemini").lower() == "gemini":
+    os.environ["LLM_MODEL"] = LLM_MODEL  # the setting above wins over .env (Gemini models only)
 
 import pandas as pd
 
