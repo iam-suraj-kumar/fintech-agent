@@ -42,7 +42,7 @@ SCENARIOS = {
         "merchant_id": "merch_wire_intl_1",
         "device_id": "dev_known_1",
         "ip": "ip_us_sf",
-        "real_ip": "1.1.1.1",
+        "real_ip": "136.24.0.1",  # San Francisco home ISP (Webpass), matches ip_us_sf
         "timestamp": datetime(2026, 7, 11, 16, 30, tzinfo=timezone.utc).isoformat(),
         "type": "wire_transfer",
         "beneficiary_is_new": True,
