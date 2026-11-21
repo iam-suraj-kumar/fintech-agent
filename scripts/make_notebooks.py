@@ -22,12 +22,16 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 def setup(nb_id: str) -> str:
     return f'''# ── Settings ────────────────────────────────────────────────────────────
-# In Colab these two show as a checkbox and a dropdown (you can also type a model name).
+# In Colab these show as a checkbox and dropdowns (the model dropdown also takes typed names).
 SHOW_LIVE_LOGS = False  # @param {{type: "boolean"}}
-LLM_MODEL = "gemini-3.5-flash"  # @param ["gemini-3.5-flash", "gemini-3.8-flash"] {{allow-input: true}}
+LLM_PROVIDER = "default"  # @param ["default", "gemini", "openai"]
+LLM_MODEL = "default"  # @param ["default", "gemini-3.5-flash", "gemini-3.8-flash", "gpt-4o-mini"] {{allow-input: true}}
 # SHOW_LIVE_LOGS: print every node's live log line, like the terminal does.
-# LLM_MODEL: model busy (503) or out of free quota (429)? Pick the other one, then
-# Runtime > Restart session > Run all. Ignored when LLM_PROVIDER=openai.
+# LLM_PROVIDER: "default" = .env, else gemini. Needs GEMINI_API_KEY or OPENAI_API_KEY
+#   (in Colab: add it under the key icon, Secrets).
+# LLM_MODEL: "default" = .env, else the provider's default (gemini-3.5-flash / gpt-4o-mini).
+#   Gemini busy (503) or out of free quota (429)? Try gemini-3.8-flash.
+# After changing these: Runtime > Restart session > Run all.
 
 # Setup: run from the repo root, and give this notebook its own database files in
 # .notebook_state/ so it never touches the app's checkpoints.sqlite / account_memory.sqlite.
@@ -56,12 +60,13 @@ if "google.colab" in sys.modules:
         if pulled.returncode != 0:
             print("Colab: could not update the repo:", pulled.stderr.strip())
     os.chdir(REPO)
-    try:
-        from google.colab import userdata  # add GEMINI_API_KEY under the key icon (Secrets) in the sidebar
+    from google.colab import userdata  # keys live under the key icon (Secrets) in the sidebar
 
-        os.environ.setdefault("GEMINI_API_KEY", userdata.get("GEMINI_API_KEY"))
-    except Exception:
-        print("No GEMINI_API_KEY secret found: notebooks 00 and 01 still work; 02-04 need it.")
+    for secret in ("GEMINI_API_KEY", "OPENAI_API_KEY"):
+        try:
+            os.environ.setdefault(secret, userdata.get(secret))
+        except Exception:
+            pass  # not added (or notebook access is off): fine unless that provider is chosen
 
 ROOT = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
 os.chdir(ROOT)
@@ -76,8 +81,13 @@ warnings.filterwarnings("ignore")
 from dotenv import load_dotenv
 
 load_dotenv(ROOT / ".env")  # never overrides the two database paths set above
-if LLM_MODEL and (os.environ.get("LLM_PROVIDER") or "gemini").lower() == "gemini":
-    os.environ["LLM_MODEL"] = LLM_MODEL  # the setting above wins over .env (Gemini models only)
+# The settings above win over .env unless left at "default".
+if LLM_PROVIDER != "default":
+    os.environ["LLM_PROVIDER"] = LLM_PROVIDER
+if LLM_MODEL != "default":
+    os.environ["LLM_MODEL"] = LLM_MODEL
+elif LLM_PROVIDER != "default":
+    os.environ.pop("LLM_MODEL", None)  # a .env model may belong to the other provider
 
 import pandas as pd
 
@@ -137,9 +147,10 @@ import core.audit  # noqa: F401  (creates the "fraud_guard" live logger)
 from core.llm import llm_model, llm_provider
 
 logging.getLogger("fraud_guard").setLevel(logging.INFO if SHOW_LIVE_LOGS else logging.WARNING)
-pd.set_option("display.max_colwidth", 160)
 key = {{"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}}.get(llm_provider(), "?")
-print(f"LLM: {{llm_provider()}} / {{llm_model()}}   ({{key}} set: {{'yes' if os.environ.get(key) else 'NO'}})")'''
+print(f"LLM: {{llm_provider()}} / {{llm_model()}}   ({{key}} set: {{'yes' if os.environ.get(key) else 'NO'}})")
+if llm_model().startswith("gemini") != (llm_provider() == "gemini"):
+    print(f"  ! model {{llm_model()!r}} doesn't look like a model for {{llm_provider()}}: check LLM_MODEL above")'''
 
 
 SETUP_NOTE = '''

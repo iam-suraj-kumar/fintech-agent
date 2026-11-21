@@ -24,6 +24,8 @@ install on your laptop.
 3. **Add your key to Colab** once: click the **key icon** (Secrets) in the left
    sidebar → **Add new secret** → name `GEMINI_API_KEY`, paste your key as the
    value, and switch on **Notebook access**.
+   *Using OpenAI instead?* Add an `OPENAI_API_KEY` secret the same way, and in
+   the notebook's first cell set the **LLM_PROVIDER** dropdown to `openai`.
 4. **Run it**: **Runtime → Run all** (click **Run anyway** if Colab warns the
    notebook isn't from Google).
 
@@ -48,7 +50,8 @@ install on your laptop.
 - **Free-tier limit:** a free key allows about 20 Gemini requests per model per
   day, and notebooks 02–04 use about 10 each. A `429 RESOURCE_EXHAUSTED`
   error means you hit it: wait until tomorrow, enable billing in AI Studio,
-  or set `os.environ["LLM_MODEL"]` to another Gemini model in the first cell.
+  or pick `gemini-3.8-flash` in the first cell's **LLM_MODEL** dropdown
+  (then Runtime → Restart session → Run all).
 - Run cells **in order**; each notebook is its own Colab session. Anything the
   notebooks save (paused reviews, account memory) is gone when the session ends.
 
