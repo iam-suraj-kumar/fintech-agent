@@ -4,6 +4,8 @@
 
 Overwrites the notebooks and clears their outputs. Edit this file, not the .ipynb files.
 """
+import base64
+import re
 import sys
 from pathlib import Path
 
@@ -74,6 +76,26 @@ def trace_table(audit_log: list[dict]) -> pd.DataFrame:
         return str(e.get("text", ""))
     return pd.DataFrame([{{"node": e.get("node", ""), "kind": e["kind"], "detail": detail(e)}} for e in audit_log])
 
+from IPython.display import Image, Markdown
+from langchain_core.runnables.graph import NodeStyles
+
+# Explicit colours so the boxes read on both light and dark themes
+# (LangGraph's default fills are pale but leave the text colour to the theme).
+GRAPH_STYLES = NodeStyles(
+    default="fill:#DCE6FA,stroke:#2459C2,stroke-width:1px,color:#15202E,line-height:1.2",
+    first="fill:#2459C2,stroke:#2459C2,color:#FFFFFF",
+    last="fill:#2F7A4A,stroke:#2F7A4A,color:#FFFFFF",
+)
+
+
+def show_graph(app):
+    """Draw a compiled graph as an image. Rendered by mermaid.ink, so it shows in Colab,
+    VS Code and JupyterLab alike; offline it falls back to Mermaid text (JupyterLab renders that)."""
+    try:
+        return Image(app.get_graph().draw_mermaid_png(node_colors=GRAPH_STYLES, background_color="white"))
+    except Exception:
+        return Markdown("```mermaid\\n" + app.get_graph().draw_mermaid(node_colors=GRAPH_STYLES) + "\\n```")
+
 import core.audit  # noqa: F401  (creates the "fraud_guard" live logger)
 from core.llm import llm_model, llm_provider
 
@@ -89,8 +111,18 @@ The next cell connects the notebook to the project. It gives this notebook **its
 '''
 
 
+_MERMAID_BLOCK = re.compile(r"```mermaid\n(.*?)```", re.S)
+
+
+def _mermaid_image(match: re.Match) -> str:
+    # Colab and GitHub don't render Mermaid in Markdown, so every diagram is an image
+    # drawn by mermaid.ink from the code in its URL (white background: readable in dark mode).
+    encoded = base64.urlsafe_b64encode(match.group(1).encode()).decode()
+    return f"![diagram](https://mermaid.ink/svg/{encoded}?bgColor=FFFFFF)"
+
+
 def md(text):
-    return nbf.v4.new_markdown_cell(text.strip())
+    return nbf.v4.new_markdown_cell(_MERMAID_BLOCK.sub(_mermaid_image, text.strip()))
 
 
 def code(text):
@@ -192,22 +224,9 @@ A LangGraph app is a **graph**:
     code('''
 from typing import TypedDict
 
-from IPython.display import Markdown
-from langchain_core.runnables.graph import NodeStyles
 from langgraph.graph import END, START, StateGraph
 
-# Explicit colours so the boxes read on both light and dark themes
-# (LangGraph's default fills are pale but leave the text colour to the theme).
-GRAPH_STYLES = NodeStyles(
-    default="fill:#DCE6FA,stroke:#2459C2,stroke-width:1px,color:#15202E,line-height:1.2",
-    first="fill:#2459C2,stroke:#2459C2,color:#FFFFFF",
-    last="fill:#2F7A4A,stroke:#2F7A4A,color:#FFFFFF",
-)
-
-
-def show(app):
-    """Draw a compiled graph (JupyterLab renders the Mermaid diagram)."""
-    return Markdown("```mermaid\\n" + app.get_graph().draw_mermaid(node_colors=GRAPH_STYLES) + "\\n```")
+show = show_graph  # defined in the setup cell: draws a compiled graph as a picture
 
 
 class ToyState(TypedDict):
@@ -801,8 +820,6 @@ Importing `graph` builds the real compiled graph with a SQLite checkpointer and 
 
 import uuid
 
-from IPython.display import Markdown
-
 from core.state import new_state
 from data.synthetic_transactions import SCENARIOS, get_scenario
 from graph import build_graph, graph
@@ -830,18 +847,7 @@ print(inspect.getsource(build_graph))
 LangGraph can draw the compiled graph itself. Dotted arrows are conditional edges; `human_review` is marked as an interrupt.
 '''),
     code('''
-from langchain_core.runnables.graph import NodeStyles
-
-# Explicit colours so the boxes read on both light and dark themes
-# (LangGraph's default fills are pale but leave the text colour to the theme).
-GRAPH_STYLES = NodeStyles(
-    default="fill:#DCE6FA,stroke:#2459C2,stroke-width:1px,color:#15202E,line-height:1.2",
-    first="fill:#2459C2,stroke:#2459C2,color:#FFFFFF",
-    last="fill:#2F7A4A,stroke:#2F7A4A,color:#FFFFFF",
-)
-
-
-Markdown("```mermaid\\n" + graph.get_graph().draw_mermaid(node_colors=GRAPH_STYLES) + "\\n```")
+show_graph(graph)
 '''),
     md('''
 ---

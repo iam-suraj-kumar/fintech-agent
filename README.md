@@ -67,7 +67,8 @@ restart the session, or a later cell fails to import, use **Runtime → Restart
 session** and run all again: the second time it skips the setup. Each notebook
 is its own Colab session, so each one does this once. Files the notebooks save
 (paused reviews, account memory) disappear when Colab recycles the session.
-The Mermaid diagrams render in JupyterLab; other viewers may show them as text.
+Diagrams are images drawn by mermaid.ink, so they show in Colab, VS Code, JupyterLab
+and on GitHub (they need an internet connection).
 
 `RESET_MEMORY_ON_START=true` (the default in `.env.example`) wipes account
 memory on every app start. Keep it on for rehearsals and the talk — otherwise repeated testing
