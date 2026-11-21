@@ -40,8 +40,11 @@ install on your laptop.
   time: it clones this repo (the notebooks import its code from `core/`,
   `agents/` and `tools/`), installs `requirements.txt`, and reads your key.
 - If Colab asks to **restart the session**, or a later cell fails to import:
-  **Runtime → Restart session**, then **Run all** again (setup is skipped the
-  second time).
+  **Runtime → Restart session**, then **Run all** again (the second time it
+  skips the install).
+- **Picking up fixes:** re-running the first cell pulls the latest code. If a
+  cell failed on something that has since been fixed, use **Runtime → Restart
+  session** and **Run all**, so the updated code is loaded.
 - **Free-tier limit:** a free key allows about 20 Gemini requests per model per
   day, and notebooks 02–04 use about 10 each. A `429 RESOURCE_EXHAUSTED`
   error means you hit it: wait until tomorrow, enable billing in AI Studio,

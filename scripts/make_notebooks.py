@@ -34,7 +34,7 @@ from pathlib import Path
 
 if "google.colab" in sys.modules:
     # Google Colab: the notebook needs the whole repo (it imports core/, agents/, tools/),
-    # so clone it and install the pinned packages on first run. Re-running skips this.
+    # so clone it and install the pinned packages on first run; later runs pull updates.
     import subprocess
 
     REPO = Path("/content/fintech-agent")
@@ -44,6 +44,12 @@ if "google.colab" in sys.modules:
                         "https://github.com/iam-suraj-kumar/fintech-agent.git", str(REPO)], check=True)
         subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", str(REPO / "requirements.txt")], check=True)
         print("Done. If a later cell fails to import, use Runtime > Restart session and run this cell again.")
+    else:
+        # Already cloned in this Colab session: pick up any fixes pushed since.
+        # (Code already imported stays old until Runtime > Restart session.)
+        pulled = subprocess.run(["git", "-C", str(REPO), "pull", "-q", "--ff-only"], capture_output=True, text=True)
+        if pulled.returncode != 0:
+            print("Colab: could not update the repo:", pulled.stderr.strip())
     os.chdir(REPO)
     try:
         from google.colab import userdata  # add GEMINI_API_KEY under the key icon (Secrets) in the sidebar
