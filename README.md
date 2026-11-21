@@ -43,22 +43,31 @@ cp .env.example .env               # then fill in GEMINI_API_KEY
 Then run the commands below without the `uv run` prefix (e.g.
 `jupyter lab notebooks/`, `python cli.py submit clean_coffee`).
 
-In **Google Colab**, run this in the first cell of a notebook, then run the
-notebook as usual (its setup cell finds the repo from the working directory):
+#### Google Colab (no install)
 
-```python
-!git clone -b develop-gemini https://github.com/iam-suraj-kumar/fintech-agent.git
-%cd fintech-agent
-!pip install -q -r requirements.txt
+Nothing to set up on your laptop. Each notebook's first cell detects Colab and
+does the setup itself: it clones this repo (the notebooks import its code from
+`core/`, `agents/` and `tools/`), installs `requirements.txt`, and reads your
+key from Colab's Secrets.
 
-import os
-from google.colab import userdata          # add GEMINI_API_KEY under Colab's "Secrets" (key icon)
-os.environ["GEMINI_API_KEY"] = userdata.get("GEMINI_API_KEY")
-```
+1. In Colab, click the **key icon** (Secrets) in the left sidebar, add
+   `GEMINI_API_KEY` with your key, and turn on **Notebook access**.
+2. Open a notebook below and choose **Runtime → Run all**.
 
-Notebooks 00 and 01 need no key. If Colab asks to restart the runtime after
-the install, restart, then run `%cd fintech-agent` and continue. The notebooks'
-Mermaid diagrams render in JupyterLab; other viewers may show them as text.
+| Notebook | What it covers | Needs a key |
+|---|---|---|
+| [00_start_here](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/00_start_here.ipynb) | the domain and LangGraph basics | no |
+| [01_triage_rules](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/01_triage_rules.ipynb) | rules triage, no AI | no |
+| [02_specialist_agents](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/02_specialist_agents.ipynb) | tools, RAG, MCP and the ReAct agents | yes |
+| [03_full_graph](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/03_full_graph.ipynb) | the whole graph and human review | yes |
+| [04_persistence_and_memory](https://colab.research.google.com/github/iam-suraj-kumar/fintech-agent/blob/develop-gemini/notebooks/04_persistence_and_memory.ipynb) | pausing, restarting and memory | yes |
+
+The first run takes about a minute (the clone and install). If Colab asks to
+restart the session, or a later cell fails to import, use **Runtime → Restart
+session** and run all again: the second time it skips the setup. Each notebook
+is its own Colab session, so each one does this once. Files the notebooks save
+(paused reviews, account memory) disappear when Colab recycles the session.
+The Mermaid diagrams render in JupyterLab; other viewers may show them as text.
 
 `RESET_MEMORY_ON_START=true` (the default in `.env.example`) wipes account
 memory on every app start. Keep it on for rehearsals and the talk — otherwise repeated testing

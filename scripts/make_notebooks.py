@@ -25,6 +25,26 @@ import sys
 import warnings
 from pathlib import Path
 
+if "google.colab" in sys.modules:
+    # Google Colab: the notebook needs the whole repo (it imports core/, agents/, tools/),
+    # so clone it and install the pinned packages on first run. Re-running skips this.
+    import subprocess
+
+    REPO = Path("/content/fintech-agent")
+    if not REPO.exists():
+        print("Colab: cloning the repo and installing packages (about a minute)...")
+        subprocess.run(["git", "clone", "-q", "-b", "develop-gemini",
+                        "https://github.com/iam-suraj-kumar/fintech-agent.git", str(REPO)], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", str(REPO / "requirements.txt")], check=True)
+        print("Done. If a later cell fails to import, use Runtime > Restart session and run this cell again.")
+    os.chdir(REPO)
+    try:
+        from google.colab import userdata  # add GEMINI_API_KEY under the key icon (Secrets) in the sidebar
+
+        os.environ.setdefault("GEMINI_API_KEY", userdata.get("GEMINI_API_KEY"))
+    except Exception:
+        print("No GEMINI_API_KEY secret found: notebooks 00 and 01 still work; 02-04 need it.")
+
 ROOT = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
